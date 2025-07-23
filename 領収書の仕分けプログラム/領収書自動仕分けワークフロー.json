@@ -1,0 +1,571 @@
+{
+  "name": "領収書自動仕分けワークフロー",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Step2. 画像検証・Base64エンコード\nconsole.log('=== 領収書画像処理開始 ===');\n\ntry {\n  // Google Driveからの元情報を保持\n  const driveInfo = $input.first().json;\n  const fileId = driveInfo.id;\n  const fileName = driveInfo.name;\n  const mimeType = driveInfo.mimeType;\n  const parentFolders = driveInfo.parents || [];\n  const binaryData = await this.helpers.getBinaryDataBuffer(0, 'data');\n\n  if (!binaryData) {\n    throw new Error('画像データが見つかりません。画像ファイルをアップロードしてください');\n  }\n\n  console.log('画像サイズ: ', binaryData.length, 'bytes');\n\n  // 画像形式の検出\n  const detectImageFormat = (buffer) => {\n    const header = buffer.toString('hex', 0, 12);\n    const base64Header = buffer.toString('base64', 0, 20);\n\n    console.log('ファイルヘッダー: ', header);\n\n    // 形式判定\n    if (header.startsWith('ffd8ff')) {\n      return { format: 'JPEG', supported: true, description: 'JPEG画像' };\n    } else if (header.startsWith('89504e47')) {\n      return { format: 'PNG', supported: true, description: 'PNG画像' };\n    } else if (header.includes('667479706865696') || base64Header.includes('NGZ0eXBoZWljAAAA')) {\n      return { format: 'HEIC', supported: false, description: 'HEIC画像 (iPhone等)' };\n    } else if (header.includes('6674797068656966')) {\n      return { format: 'HEIF', supported: false, description: 'HEIF画像' };\n    } else {\n      return { format: 'UNKNOWN', supported: false, description: '未知の形式' };\n    }\n  }\n\n  // 形式チェック実行\n  const formatInfo = detectImageFormat(binaryData);\n  console.log(`検出形式: ${formatInfo.format} - ${formatInfo.description}`);\n\n  if (!formatInfo.supported) {\n    return {\n      error: {\n        code: 'UNSUPPORTED_FORMAT',\n        message: `${formatInfo.format}形式はサポートされていません`,\n        detectedFormat: formatInfo.format,\n        solution: 'JPEGまたはPNG形式で保存し直してください'\n      },\n      conversionInstructions: {\n        iPhone: '設定 → カメラ → フォーマット → \"互換性優先\" を選択',\n        Android: 'カメラアプリでJPEG形式を選択',\n        PC: '画像エディタでJPEG/PNG形式で保存し直し'\n      },\n      status: '❌ 非対応形式検出'\n    };\n  }\n\n  // ファイルサイズチェック(20MB制限)\n  const maxSize = 20 * 1024 * 1024;\n  if (binaryData.length > maxSize) {\n    throw new Error(`ファイルサイズが大きすぎます: ${Math.round(binaryData.length / 1024 / 1024)}MB (上限: 20MB)`);\n  }\n\n  // Base64エンコード\n  let base64String = binaryData.toString('base64');\n  base64String = base64String.replace(/[\\r\\n\\s]/g, '');\n\n  const metadata = $binary.data || {};\n\n    // 成功レスポンス\n  return {\n    googleDriveMetadata: {\n        fileId: fileId,\n        fileName: fileName,\n        mimeType: mimeType,\n        parentFolders: parentFolders,\n    },\n    imageInfo: {\n      fileName: metadata.fileName || 'receipt.jpg',\n      format: formatInfo.format,\n      sizeBytes: binaryData.length,\n      sizeMB: Math.round(binaryData.length / 1024 / 1024 * 100) / 100\n    },\n    base64Image: base64String,\n    processingTime: new Date().toISOString(),\n    status: '✅ 画像処理完了 - Vision API送信準備完了'\n  };\n  \n} catch (error) {\n  console.error('画像処理エラー: ', error.message);\n\n  const driveInfo = $input.first().json;\n\n  return {\n    error: {\n      message: error.message,\n      type: 'image_processing_error'\n    },\n    googleDriveMetadata: {\n        fileId: driveInfo.id,\n        fileName: driveInfo.name,\n        mimeType: driveInfo.mimeType,\n        parentFolders: driveInfo.parents || [],\n    },\n    troubleshooting: [\n      '1. JPEG または PNG 形式の画像を使用',\n      '2. ファイルサイズを20MB以下に',\n      '3. 画像が破損していないかチェック'\n    ],\n    status: '❌ 画像処理失敗'      \n  }\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        380,
+        -20
+      ],
+      "id": "ebee3635-fffa-4c2c-a1dd-737b92bd4fdc",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vision.googleapis.com/v1/images:annotate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"requests\": [\n    {\n      \"image\": {\n        \"content\": \"{{$json.base64Image}}\"\n      },\n      \"features\": [\n        {\n          \"type\": \"DOCUMENT_TEXT_DETECTION\",\n          \"maxResults\": 50\n        }\n      ],\n      \"imageContext\": {\n        \"languageHints\": [\"ja\", \"en\"]\n      }\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        -20
+      ],
+      "id": "a2ae08d7-be41-43b4-a47a-4471a699223c",
+      "name": "HTTP Request",
+      "credentials": {
+        "gongOAuth2Api": {
+          "id": "kDwiVfYOgp49eo1M",
+          "name": "Gong account"
+        },
+        "googleOAuth2Api": {
+          "id": "15O8aIhAoncGbMcB",
+          "name": "Google account"
+        },
+        "googleApi": {
+          "id": "PFBlmqNapWAt1aQL",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=```\n以下のOCRテキストから領収書情報を抽出してください：\n\n{{ $json.responses[0].textAnnotations[0].description }}\n```\n",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "あなたは日本の個人事業主・フリーランス向けの経理処理専門AIです。\n\n領収書OCRテキストから情報を抽出し、以下のJSON形式で出力してください：\n\n{\n  \"date\": \"YYYY-MM-DD\",\n  \"amount\": 数値,\n  \"storeType\": \"cafe/restaurant/online/retail/transport/utility/software/other\",\n  \"debitAccount\": \"勘定科目\",\n  \"creditAccount\": \"貸方科目\",\n  \"memo\": \"適切な摘要内容\",\n  \"confidence\": {\"date\": 1-10, \"storeName\": 1-10, \"amount\": 1-10},\n  \"flags\": {\"needsReview\": false, \"lowConfidence\": false}\n}\n\n## 摘要（memo）の生成ルール：\n- **店舗名が判明している場合**: 店舗名を含める\n- **商品名・サービス名が明記されている場合**: それを含める\n- **区間・詳細が記載されている場合**: その情報を含める\n- **推測や解釈は含めない**: OCRテキストから実際に読み取れる情報のみ使用\n\n## 摘要の具体例：\n- 「タリーズコーヒー　草加店」（店舗名のみ）\n- 「タリーズコーヒー　草加店 アイス G コーヒー」（店舗名+商品名）（ただし、4つ以上の商品が記載されていた場合、省略すること）\n- 「Amazon 書籍名」（サイト名+商品名が分かる場合）\n- 「JR東日本 新宿→渋谷」（交通機関+区間が分かる場合）\n- 「ローソン」（店舗名のみ）\n\n## 注意事項：\n- 「作業用」「打ち合わせ」「事務用品」などの用途は推測なので含めない\n- OCRテキストに明記されていない情報は追加しない\n- 店舗名と商品・サービス名があれば両方含める\n\n## 利用可能な借方勘定科目（必ずこの中から選択）：\n- 消耗品費：カフェ飲み物代、オフィス用品、少額備品\n- 教育研修費：書籍、セミナー、オンライン講座\n- 工具器具備品：PC機器、高額備品（3万円以上目安）\n- 接待交際費：飲食店での接待・会食（3000円超）\n- 雑費：少額・分類困難な支出\n- 旅費交通費：電車、バス、タクシー、宿泊費\n- 地代家賃：オフィス賃料、コワーキングスペース\n- 水道光熱費：電気、ガス、水道料金\n- 通信費：携帯電話、インターネット料金\n- ソフトウェア使用料：SaaS、ソフトライセンス\n- 損害保険料：各種保険料\n- 支払手数料：振込手数料、決済手数料\n- 修繕費：設備・機器修理\n- 減価償却費：固定資産償却\n\n## 利用可能な貸方科目：\n- 事業主借：個人立替（現金支払い）\n- 普通預金：銀行口座引き落とし\n- 未払金：後払い・掛け取引\n\n## 判定ルール：\n- カフェ・喫茶店（作業目的） → 雑費\n- 飲食店 → 接待交際費\n- Amazon等 書籍・教材 → 教育研修費\n- Amazon等 PC機器・高額 → 工具器具備品\n- Amazon等 少額商品 → 消耗品費\n- 交通機関 → 旅費交通費\n- AIサービス・SaaS・ソフト → ソフトウェア使用料\n- 通信会社 → 通信費\n- 不明・その他 → 雑費\n\n## 貸方科目判定：\n- 現金支払い・個人立替 → 事業主借\n- 銀行引き落とし → 普通預金\n- 後払い → 未払金\n\n必ずJSON形式のみで回答してください。上記勘定科目以外は使用禁止です。"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        820,
+        -20
+      ],
+      "id": "bc15b75c-4cd2-48c7-8caf-3d26b28ee221",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxTokens": 1000,
+          "responseFormat": "json_object",
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "typeVersion": 1,
+      "position": [
+        848,
+        200
+      ],
+      "id": "68a400ee-3bc3-4a13-b908-d928116f852d",
+      "name": "DeepSeek Chat Model",
+      "credentials": {
+        "deepSeekApi": {
+          "id": "f3jYMZQZ4pcIZClv",
+          "name": "DeepSeek account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"date\": \"YYYY-MM-DD\",\n  \"storeName\": \"店舗名\",\n  \"amount\": 470,\n  \"storeType\": \"cafe\",\n  \"debitAccount\": \"会議費\",\n  \"creditAccount\": \"事業主借\",\n  \"memo\": \"自動生成されたメモ\",\n  \"confidence\": {\n    \"date\": 9,\n    \"storeName\": 8,\n    \"amount\": 10\n  },\n  \"flags\": {\n    \"needsReview\": false,\n    \"lowConfidence\": false\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        968,
+        200
+      ],
+      "id": "a3f7bcdd-0c50-4753-8ad4-09d36602dade",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1azeC_qT8jwgzmonRM0yUJB6y8R_A7BJuOnX3t9oswC0",
+          "mode": "list",
+          "cachedResultName": "青色申告帳簿作成ツール_R6",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1azeC_qT8jwgzmonRM0yUJB6y8R_A7BJuOnX3t9oswC0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 63546998,
+          "mode": "list",
+          "cachedResultName": "仕訳帳",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1azeC_qT8jwgzmonRM0yUJB6y8R_A7BJuOnX3t9oswC0/edit#gid=63546998"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "日付": "={{ $json.output.date }}",
+            "借方科目": "={{ $json.output.debitAccount }}",
+            "借方金額": "={{ $json.output.amount }}",
+            "貸方科目": "={{ $json.output.creditAccount }}",
+            "貸方金額": "={{ $json.output.amount }}",
+            "摘要": "={{ $json.output.memo }}",
+            "エラーメッセージ": "={{\n  $json.output.flags.needsReview === true ? \"要確認\" :\n  \"正常\"\n}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "日付",
+              "displayName": "日付",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "借方科目",
+              "displayName": "借方科目",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "借方金額",
+              "displayName": "借方金額",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "貸方科目",
+              "displayName": "貸方科目",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "貸方金額",
+              "displayName": "貸方金額",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "摘要",
+              "displayName": "摘要",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "エラーメッセージ",
+              "displayName": "エラーメッセージ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "locationDefine": {
+            "values": {
+              "headerRow": 2
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1196,
+        -20
+      ],
+      "id": "949cb0a5-05be-4b1b-a2c8-0a7b70e65b37",
+      "name": "Google Sheets",
+      "credentials": {
+        "googleApi": {
+          "id": "uXrY8trz7d6gNd51",
+          "name": "Google Spread Sheet"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1LEK-NhjFeUgx8PVupUVcmn_VPkOQ5zhg",
+          "mode": "list",
+          "cachedResultName": "未処理",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1LEK-NhjFeUgx8PVupUVcmn_VPkOQ5zhg"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -20
+      ],
+      "id": "8640c31e-cfa2-40ab-a250-b95b608fa7de",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "89AhIGlkPFv7nKCb",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        160,
+        -20
+      ],
+      "id": "22a79325-9c4b-42f6-96e5-5515f463f192",
+      "name": "Google Drive1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "89AhIGlkPFv7nKCb",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json._driveFileId }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1TyGzpYYNiaVc4qhmtNonTSdLS1zi2qd_",
+          "mode": "list",
+          "cachedResultName": "エラー",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1TyGzpYYNiaVc4qhmtNonTSdLS1zi2qd_"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1856,
+        80
+      ],
+      "id": "b5ae4740-e431-408d-98f7-e88ef99e52c5",
+      "name": "Move to \"Error\" Folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "89AhIGlkPFv7nKCb",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Code').item.json.googleDriveMetadata.fileId }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1vr_lelUDf2-3vBwEL60mu-g9bPlQ65jH",
+          "mode": "list",
+          "cachedResultName": "処理済み",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1vr_lelUDf2-3vBwEL60mu-g9bPlQ65jH"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1856,
+        -120
+      ],
+      "id": "b33973ef-438f-4726-b379-a966780419e5",
+      "name": "Move to \"processed\" folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "89AhIGlkPFv7nKCb",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return {\n  ...$json,\n  \n  // Google Drive Trigger情報を保持\n  _driveFileId: $('Google Drive Trigger').first().json.id,\n  _driveFileName: $('Google Drive Trigger').first().json.name,\n  _driveParents: $('Google Drive Trigger').first().json.parents[0],\n  _photoLink: $('Google Drive Trigger').first().json.lastModifyingUser.photoLink\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1416,
+        -20
+      ],
+      "id": "32bba389-2908-4556-9cfe-5af1d8e33544",
+      "name": "Google Driveを情報を戻り値に含める"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "33aee7de-3bc8-4db3-8d13-a18e56152f1e",
+              "leftValue": "={{ $('Basic LLM Chain').item.json.output.flags.needsReview }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "e7274eac-e8fb-4d7f-a573-673e288da6dd",
+              "leftValue": "={{ $('Basic LLM Chain').item.json.output.flags.lowConfidence }}",
+              "rightValue": "false",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1636,
+        -20
+      ],
+      "id": "c6cafc1f-8d02-44ca-bb5a-25376e30f06e",
+      "name": "領収書かどうかを確認",
+      "alwaysOutputData": false,
+      "executeOnce": false
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Google Drive1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive1": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Google Driveを情報を戻り値に含める",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Driveを情報を戻り値に含める": {
+      "main": [
+        [
+          {
+            "node": "領収書かどうかを確認",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "領収書かどうかを確認": {
+      "main": [
+        [
+          {
+            "node": "Move to \"processed\" folder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to \"Error\" Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move to \"processed\" folder": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0860112d-f955-4601-b405-1320343790a6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a17405cf09e39ddc1a91d2d5324a5112905aaf8308696f1df377b8f4d0c3e670"
+  },
+  "id": "gzYO8pATNjpGb22w",
+  "tags": []
+}

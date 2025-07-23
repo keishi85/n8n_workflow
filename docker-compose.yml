@@ -1,0 +1,25 @@
+name: n8n
+
+services:
+  n8n:
+    image: n8nio/n8n:latest # 最新版のn8nイメージを指定
+    container_name: n8n_local # コンテナ名を指定 (任意)
+    restart: unless-stopped # コンテナが停止した場合、手動で停止しない限り再起動
+    ports:
+      - "5678:5678" # ホストOSの5678番ポートをコンテナの5678番ポートに接続
+    environment:
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=${N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS}
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - GOOGLE_SERVICE_ACCOUNT_EMAIL=${GOOGLE_SERVICE_ACCOUNT_EMAIL}
+      - GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY_ID=${GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY_ID}
+      - GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY=${GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY}
+      - GOOGLE_REFRESH_TOKEN=${GOOGLE_REFRESH_TOKEN}
+    env_file:
+      - .env
+    volumes:
+      # n8nの設定データやワークフローデータを永続化するためのボリューム
+      - n8n_personal:/home/node/.n8n
+
+volumes:
+  n8n_personal:
