@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>売上分析レポート - 2025-08-08</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #2d3748;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .report-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            color: white;
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header .subtitle {
+            font-size: 1.3em;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+        
+        .header .date {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .alert-section {
+            margin-bottom: 30px;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .alert.warning {
+            background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 100%);
+            border-left: 5px solid #e53e3e;
+        }
+        
+        .alert.success {
+            background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%);
+            border-left: 5px solid #38a169;
+        }
+        
+        .alert.info {
+            background: linear-gradient(135deg, #bee3f8 0%, #90cdf4 100%);
+            border-left: 5px solid #3182ce;
+        }
+        
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .kpi-card {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            position: relative;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .kpi-card .icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .kpi-card .label {
+            font-size: 0.9em;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .kpi-card .value {
+            font-size: 2.2em;
+            font-weight: 800;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+        
+        .kpi-card .change {
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+        
+        .positive { color: #38a169; }
+        .negative { color: #e53e3e; }
+        .neutral { color: #718096; }
+        
+        .section {
+            margin-bottom: 50px;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #e2e8f0;
+        }
+        
+        .section-header h2 {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #2d3748;
+        }
+        
+        .section-header .icon {
+            font-size: 1.5em;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        .data-table th {
+            background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+            color: white;
+            padding: 20px 15px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.9em;
+        }
+        
+        .data-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            transition: background 0.2s ease;
+        }
+        
+        .data-table tr:hover {
+            background: #f7fafc;
+        }
+        
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            font-weight: bold;
+            color: white;
+            font-size: 0.9em;
+        }
+        
+        .rank-1 { background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%); }
+        .rank-2 { background: linear-gradient(135deg, #a0aec0 0%, #718096 100%); }
+        .rank-3 { background: linear-gradient(135deg, #d69e2e 0%, #b7791f 100%); }
+        .rank-other { background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); }
+        
+        .amount {
+            font-weight: 700;
+            color: #38a169;
+            font-size: 1.1em;
+        }
+        
+        .share-percent {
+            background: #edf2f7;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+        }
+        
+        .footer {
+            background: #f7fafc;
+            padding: 30px;
+            text-align: center;
+            color: #718096;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .metadata {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .metadata span {
+            background: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* チャート関連のスタイル */
+        .chart-container-svg {
+            background: #f7fafc;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .sales-chart {
+            width: 100%;
+            height: auto;
+            max-height: 350px;
+        }
+
+        .chart-line {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: drawLine 2s ease-in-out forwards;
+        }
+
+        .chart-area {
+            opacity: 0;
+            animation: fadeInArea 1.5s ease-in-out 0.5s forwards;
+        }
+
+        .data-point {
+            cursor: pointer;
+            transition: r 0.3s ease, stroke-width 0.3s ease;
+        }
+
+        .data-point:hover {
+            r: 8;
+            stroke-width: 4;
+        }
+
+        .chart-tooltip {
+            position: absolute;
+            background: rgba(45, 55, 72, 0.95);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 2px solid rgb(102, 126, 234);
+        }
+
+        .tooltip-date {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .tooltip-value {
+            color: #a0aec0;
+            font-size: 13px;
+        }
+
+        @keyframes drawLine {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        @keyframes fadeInArea {
+            to {
+                opacity: 1;
+            }
+        }
+
+        .trend-summary {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .trend-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #718096;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #2d3748;
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .header .date {
+                position: static;
+                margin-top: 20px;
+                text-align: center;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .grid-layout {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .data-table {
+                font-size: 0.9em;
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: 10px 8px;
+            }
+            
+            .chart-container-svg {
+                padding: 15px;
+            }
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .report-container {
+                box-shadow: none;
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <div class="header">
+            <div class="date">2025-08-08</div>
+            <div class="header-content">
+                <h1>📊 売上分析レポート</h1>
+                <p class="subtitle">包括的な業績分析とインサイト</p>
+            </div>
+        </div>
+        
+        <div class="content">
+            <!-- アラートセクション -->
+            <div class="alert-section">
+                <div class="alert success">
+                    <strong>売上が前週比11.5%増加しています</strong>
+                    <span style="margin-left: auto; font-size: 0.9em;">💡 好調要因の分析と継続施策を検討</span>
+                </div>
+                <div class="alert info">
+                    <strong>平均注文額: ¥66600</strong>
+                    <span style="margin-left: auto; font-size: 0.9em;"> 単価向上施策の効果が現れています</span>
+                </div>
+            </div>
+            
+            <!-- KPIダッシュボード -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="icon">💰</div>
+                    <div class="label">総売上</div>
+                    <div class="value">¥1998000</div>
+                    <div class="change positive">
+                        ▲ 11.5% 前週比
+                    </div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="icon">📦</div>
+                    <div class="label">総販売数</div>
+                    <div class="value">281</div>
+                    <div class="change neutral">15種類の商品</div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="icon">📋</div>
+                    <div class="label">総注文数</div>
+                    <div class="value">30</div>
+                    <div class="change neutral">件の取引完了</div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="icon">📈</div>
+                    <div class="label">平均注文額</div>
+                    <div class="value">¥66600</div>
+                    <div class="change neutral">1件あたり</div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="icon">📅</div>
+                    <div class="label">平均日売上</div>
+                    <div class="value">¥66600</div>
+                    <div class="change neutral">1日あたり</div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="icon">📊</div>
+                    <div class="label">平均数量/注文</div>
+                    <div class="value">9</div>
+                    <div class="change neutral">個/件</div>
+                </div>
+            </div>
+            
+            <div class="grid-layout">
+                <!-- トップ商品 -->
+                <div class="section">
+                    <div class="section-header">
+                        <span class="icon">🏆</span>
+                        <h2>売上トップ商品</h2>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>順位</th>
+                                <th>商品名</th>
+                                <th>売上額</th>
+                                <th>販売数</th>
+                                <th>構成比</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="rank-badge rank-1">1</span></td>
+                                <td><strong>商品E</strong></td>
+                                <td class="amount">¥470000</td>
+                                <td>48個</td>
+                                <td><span class="share-percent">23.5%</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="rank-badge rank-2">2</span></td>
+                                <td><strong>商品A</strong></td>
+                                <td class="amount">¥380000</td>
+                                <td>75個</td>
+                                <td><span class="share-percent">19.0%</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="rank-badge rank-3">3</span></td>
+                                <td><strong>商品C</strong></td>
+                                <td class="amount">¥253000</td>
+                                <td>29個</td>
+                                <td><span class="share-percent">12.7%</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="rank-badge rank-other">4</span></td>
+                                <td><strong>商品F</strong></td>
+                                <td class="amount">¥182000</td>
+                                <td>19個</td>
+                                <td><span class="share-percent">9.1%</span></td>
+                            </tr>
+                            <tr>
+                                <td><span class="rank-badge rank-other">5</span></td>
+                                <td><strong>商品B</strong></td>
+                                <td class="amount">¥135000</td>
+                                <td>26個</td>
+                                <td><span class="share-percent">6.8%</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- トップ担当者 -->
+                <div class="section">
+                    <div class="section-header">
+                        <span class="icon">🌟</span>
+                        <h2>売上トップ担当者</h2>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>順位</th>
+                                <th>担当者名</th>
+                                <th>売上額</th>
+                                <th>注文数</th>
+                                <th>平均注文額</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="rank-badge rank-1">1</span></td>
+                                <td><strong>田中</strong></td>
+                                <td class="amount">¥827000</td>
+                                <td>11件</td>
+                                <td>¥75182</td>
+                            </tr>
+                            <tr>
+                                <td><span class="rank-badge rank-2">2</span></td>
+                                <td><strong>山田</strong></td>
+                                <td class="amount">¥712000</td>
+                                <td>9件</td>
+                                <td>¥79111</td>
+                            </tr>
+                            <tr>
+                                <td><span class="rank-badge rank-3">3</span></td>
+                                <td><strong>佐藤</strong></td>
+                                <td class="amount">¥459000</td>
+                                <td>10件</td>
+                                <td>¥45900</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- カテゴリ分析 -->
+            <div class="section">
+                <div class="section-header">
+                    <span class="icon">📈</span>
+                    <h2>カテゴリ別売上分析</h2>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>順位</th>
+                            <th>カテゴリ</th>
+                            <th>売上額</th>
+                            <th>販売数</th>
+                            <th>商品種類数</th>
+                            <th>構成比</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="rank-badge rank-1">1</span></td>
+                            <td><strong>家電</strong></td>
+                            <td class="amount">¥985000</td>
+                            <td>149個</td>
+                            <td>3種類</td>
+                            <td><span class="share-percent">49.3%</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="rank-badge rank-2">2</span></td>
+                            <td><strong>家具</strong></td>
+                            <td class="amount">¥785000</td>
+                            <td>86個</td>
+                            <td>7種類</td>
+                            <td><span class="share-percent">39.3%</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="rank-badge rank-3">3</span></td>
+                            <td><strong>雑貨</strong></td>
+                            <td class="amount">¥228000</td>
+                            <td>46個</td>
+                            <td>5種類</td>
+                            <td><span class="share-percent">11.4%</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 日別トレンド（動的データ対応版） -->
+            <div class="section">
+                <div class="section-header">
+                    <span class="icon">📅</span>
+                    <h2>直近の日別売上推移</h2>
+                </div>
+                <div class="chart-container-svg">
+                    <svg id="salesChart" viewBox="0 0 800 300" class="sales-chart">
+                        <!-- グリッド線 -->
+                        <defs>
+                            <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style="stop-color:rgba(102, 126, 234, 0.3);stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:rgba(102, 126, 234, 0.05);stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        
+                        <!-- Y軸グリッド -->
+                        <g class="grid-y">
+                            <line x1="60" y1="50" x2="750" y2="50" stroke="#e2e8f0" stroke-width="1"/>
+                            <line x1="60" y1="100" x2="750" y2="100" stroke="#e2e8f0" stroke-width="1"/>
+                            <line x1="60" y1="150" x2="750" y2="150" stroke="#e2e8f0" stroke-width="1"/>
+                            <line x1="60" y1="200" x2="750" y2="200" stroke="#e2e8f0" stroke-width="1"/>
+                            <line x1="60" y1="250" x2="750" y2="250" stroke="#e2e8f0" stroke-width="1"/>
+                        </g>
+                        
+                        <!-- Y軸ラベル -->
+                        <g class="labels-y" fill="#718096" font-size="12" font-family="Arial">
+                            <text x="50" y="55" text-anchor="end">¥600K</text>
+                            <text x="50" y="105" text-anchor="end">¥480K</text>
+                            <text x="50" y="155" text-anchor="end">¥360K</text>
+                            <text x="50" y="205" text-anchor="end">¥240K</text>
+                            <text x="50" y="255" text-anchor="end">¥120K</text>
+                        </g>
+                        
+                        <!-- エリアチャート（動的データで生成される予定） -->
+                        <path id="chartArea" fill="url(#areaGradient)" class="chart-area"/>
+                        
+                        <!-- 折れ線（動的データで生成される予定） -->
+                        <path id="chartLine" stroke="rgb(102, 126, 234)" stroke-width="3" fill="none" class="chart-line"/>
+                        
+                        <!-- データポイント（動的に生成） -->
+                        <g id="dataPoints" class="data-points"></g>
+                        
+                        <!-- X軸ラベル -->
+                        <g class="labels-x" fill="#718096" font-size="12" font-family="Arial" id="xLabels">
+                        </g>
+                    </svg>
+                    
+                    <!-- ツールチップ -->
+                    <div id="tooltip" class="chart-tooltip" style="display: none;">
+                        <div class="tooltip-content">
+                            <div class="tooltip-date"></div>
+                            <div class="tooltip-value"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="trend-summary">
+                    <div class="trend-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">最高売上日</span>
+                            <span class="stat-value" id="maxSalesDay">2024/1/30 (¥72000)</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">直近7日平均</span>
+                            <span class="stat-value">¥66600</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">前週売上</span>
+                            <span class="stat-value">¥471000</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">今週売上</span>
+                            <span class="stat-value positive">¥525000 📈</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>レポート生成日時:</strong> 2025-08-08T16:50:10.750Z</p>
+            <div class="metadata">
+                <span>📄 処理レコード数: 30</span>
+                <span>✅ 有効レコード数: 30</span>
+                <span>⚡ 自動生成レポート</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- データをHTMLに埋め込む -->
+    <script id="chartData" type="application/json">
+        [object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object],[object Object]
+    </script>
+    
+    <script>
+        // 印刷機能
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                e.preventDefault();
+                window.print();
+            }
+        });
+        
+        // 動的効果とチャート生成
+        document.addEventListener('DOMContentLoaded', function() {
+            // KPIカードのアニメーション
+            const kpiCards = document.querySelectorAll('.kpi-card');
+            kpiCards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+            
+            // 動的チャート生成
+            generateDynamicChart();
+            
+            // ツールチップ機能
+            setupTooltips();
+        });
+        
+        function generateDynamicChart() {
+            // HTMLに埋め込まれたデータを取得
+            const dataScript = document.getElementById('chartData');
+            let dailyData = [];
+            
+            try {
+                dailyData = JSON.parse(dataScript.textContent);
+            } catch (e) {
+                console.log('データの解析に失敗しました。デフォルトグラフを表示します。');
+                generateDefaultChart();
+                return;
+            }
+            
+            if (!dailyData || dailyData.length === 0) {
+                console.log('データが見つかりません。デフォルトグラフを表示します。');
+                generateDefaultChart();
+                return;
+            }
+            
+            console.log('動的データ:', dailyData);
+            
+            // データの最大値と最小値を計算
+            const amounts = dailyData.map(d => parseInt(d.amount) || 0);
+            const maxAmount = Math.max(...amounts);
+            const minAmount = Math.min(...amounts);
+            const range = maxAmount - minAmount || 1;
+            
+            // Y軸のスケール計算（200pxの高さで使用）
+            const scale = 200 / range;
+            
+            // SVG要素を取得
+            const chartArea = document.getElementById('chartArea');
+            const chartLine = document.getElementById('chartLine');
+            const dataPoints = document.getElementById('dataPoints');
+            const xLabels = document.getElementById('xLabels');
+            
+            // 既存の要素をクリア
+            dataPoints.innerHTML = '';
+            xLabels.innerHTML = '';
+            
+            // パス文字列を生成
+            let pathD = '';
+            let areaD = '';
+            const points = [];
+            
+            dailyData.forEach((data, index) => {
+                const x = 110 + (index * 100);
+                const y = 250 - ((parseInt(data.amount) || 0 - minAmount) * scale);
+                points.push({ x, y, date: data.date, amount: parseInt(data.amount) || 0 });
+                
+                if (index === 0) {
+                    pathD = `M ${x},${y}`;
+                    areaD = `M ${x},${y}`;
+                } else {
+                    pathD += ` L ${x},${y}`;
+                    areaD += ` L ${x},${y}`;
+                }
+            });
+            
+            // エリアパスを閉じる
+            if (points.length > 0) {
+                const lastPoint = points[points.length - 1];
+                areaD += ` L ${lastPoint.x},250 L ${points[0].x},250 Z`;
+            }
+            
+            // パスを設定
+            chartLine.setAttribute('d', pathD);
+            chartArea.setAttribute('d', areaD);
+            
+            // データポイントとラベルを生成
+            points.forEach((point, index) => {
+                // データポイント
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', point.x);
+                circle.setAttribute('cy', point.y);
+                circle.setAttribute('r', '6');
+                circle.setAttribute('fill', 'white');
+                circle.setAttribute('stroke', 'rgb(102, 126, 234)');
+                circle.setAttribute('stroke-width', '3');
+                circle.setAttribute('class', 'data-point');
+                circle.setAttribute('data-value', point.amount);
+                circle.setAttribute('data-date', point.date);
+                dataPoints.appendChild(circle);
+                
+                // X軸ラベル
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', point.x);
+                text.setAttribute('y', '280');
+                text.setAttribute('text-anchor', 'middle');
+                text.textContent = point.date;
+                xLabels.appendChild(text);
+            });
+            
+            // 最高売上日の更新
+            const maxSalesDay = dailyData.reduce((max, current) => 
+                (parseInt(current.amount) || 0) > (parseInt(max.amount) || 0) ? current : max
+            );
+            const maxSalesDayElement = document.getElementById('maxSalesDay');
+            if (maxSalesDayElement && maxSalesDay) {
+                maxSalesDayElement.textContent = `${maxSalesDay.date} (¥${maxSalesDay.amount})`;
+            }
+        }
+        
+        function generateDefaultChart() {
+            // デフォルトのグラフ（データがない場合）
+            const chartArea = document.getElementById('chartArea');
+            const chartLine = document.getElementById('chartLine');
+            const dataPoints = document.getElementById('dataPoints');
+            const xLabels = document.getElementById('xLabels');
+            
+            // デフォルトデータ
+            const defaultData = [
+                { date: '8/2', amount: 192000 },
+                { date: '8/3', amount: 275000 },
+                { date: '8/4', amount: 338000 },
+                { date: '8/5', amount: 242000 },
+                { date: '8/6', amount: 458500 },
+                { date: '8/7', amount: 308000 },
+                { date: '8/8', amount: 578000 }
+            ];
+            
+            const amounts = defaultData.map(d => d.amount);
+            const maxAmount = Math.max(...amounts);
+            const minAmount = Math.min(...amounts);
+            const scale = 200 / (maxAmount - minAmount);
+            
+            let pathD = '';
+            let areaD = '';
+            const points = [];
+            
+            defaultData.forEach((data, index) => {
+                const x = 110 + (index * 100);
+                const y = 250 - ((data.amount - minAmount) * scale);
+                points.push({ x, y, date: data.date, amount: data.amount });
+                
+                if (index === 0) {
+                    pathD = `M ${x},${y}`;
+                    areaD = `M ${x},${y}`;
+                } else {
+                    pathD += ` L ${x},${y}`;
+                    areaD += ` L ${x},${y}`;
+                }
+            });
+            
+            areaD += ` L ${points[points.length - 1].x},250 L ${points[0].x},250 Z`;
+            
+            chartLine.setAttribute('d', pathD);
+            chartArea.setAttribute('d', areaD);
+            
+            points.forEach((point, index) => {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', point.x);
+                circle.setAttribute('cy', point.y);
+                circle.setAttribute('r', '6');
+                circle.setAttribute('fill', 'white');
+                circle.setAttribute('stroke', 'rgb(102, 126, 234)');
+                circle.setAttribute('stroke-width', '3');
+                circle.setAttribute('class', 'data-point');
+                circle.setAttribute('data-value', point.amount);
+                circle.setAttribute('data-date', point.date);
+                dataPoints.appendChild(circle);
+                
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', point.x);
+                text.setAttribute('y', '280');
+                text.setAttribute('text-anchor', 'middle');
+                text.textContent = point.date;
+                xLabels.appendChild(text);
+            });
+        }
+        
+        function setupTooltips() {
+            const tooltip = document.getElementById('tooltip');
+            const tooltipDate = tooltip.querySelector('.tooltip-date');
+            const tooltipValue = tooltip.querySelector('.tooltip-value');
+            
+            document.addEventListener('mouseenter', function(e) {
+                if (e.target.classList.contains('data-point')) {
+                    const date = e.target.getAttribute('data-date');
+                    const value = parseInt(e.target.getAttribute('data-value'));
+                    
+                    tooltipDate.textContent = date;
+                    tooltipValue.textContent = '売上: ¥' + value.toLocaleString();
+                    
+                    tooltip.style.display = 'block';
+                }
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (e.target.classList.contains('data-point')) {
+                    const rect = e.target.closest('.chart-container-svg').getBoundingClientRect();
+                    tooltip.style.left = (e.clientX - rect.left + 10) + 'px';
+                    tooltip.style.top = (e.clientY - rect.top - 40) + 'px';
+                }
+            });
+            
+            document.addEventListener('mouseleave', function(e) {
+                if (e.target.classList.contains('data-point')) {
+                    tooltip.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>
