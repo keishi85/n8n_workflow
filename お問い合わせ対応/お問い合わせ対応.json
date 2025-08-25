@@ -1,0 +1,1019 @@
+{
+  "name": "お問い合わせフォームの自動処理",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "q": "-from:info@workflow-pro.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -40
+      ],
+      "id": "f851d0dd-3384-441b-a628-769dc3e7ed53",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aas5cT8OhdrC2McF",
+          "name": "Client Account-事業メアド"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=`以下のメールを5つのカテゴリに分類し、JSON形式で回答してください：  【分類カテゴリ】 - 資料請求 - 質問関連   - 苦情・トラブル - サービス通知 - その他  【メール情報】 送信者: {{ $json.From }} 件名: {{ $json.Subject }} 内容: {{ $json.snippet }}  【回答形式】 {   \"category\": \"カテゴリ名\",   \"confidence\": 90,   \"reason\": \"分類理由\" }  必ず上記のJSON形式のみで回答してください。`",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "あなたはメール分類の専門AIです。与えられたメールを正確に4つのカテゴリ（資料請求、質問関連、苦情・トラブル、その他）に分類し、必ずJSON形式で回答してください。"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        440,
+        -40
+      ],
+      "id": "166289af-0fd9-4e68-9bc6-df16ff2b60af",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        528,
+        180
+      ],
+      "id": "61783a87-4860-47e1-8e72-3425efa9dfec",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "oViNDGJqnvl0hhbF",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.text.includes('\"catefory\": \"資料請求\"') }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "f68685c3-efa6-4134-8df3-579ce22da1b6"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c2eec210-c604-47aa-b1b6-574b7816c3c5",
+                    "leftValue": "={{ $json.text.includes('\"category\": \"質問関連\"') }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "9f2051da-0040-4442-bbd6-ae80f4081b9f",
+                    "leftValue": "={{ $json.text.includes('\"category\": \"苦情・トラブル\"') }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "8e6f996c-9422-4771-a1f8-e01f783ab83f",
+                    "leftValue": "={{ $json.text.includes('\"category\": \"その他\"') }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "8d862f70-e633-4f84-a497-f4d90a083177",
+                    "leftValue": "={{ $json.text.includes('\"category\": \"サービス通知\"') }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        816,
+        -82
+      ],
+      "id": "a3972685-49ac-4f00-8ec5-d605e5751c4e",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "668b5dff-3a41-4c5f-9876-1427ec2de9af",
+              "name": "reply_text",
+              "value": "=reply_text: ご担当者様\\n\\nこの度は、ご不便をおかけして申し訳ございません。 いただいた件について、至急確認して適切に対応いたします。\\n※この返信は後でDify RAGの結果に置き換えられます※\\nよろしくお願いいたします。  category: 苦情・トラブル  original_subject: {{ $('Gmail Trigger').item.json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "53a3f7f9-cfb4-48ad-8a8d-0fabeab9706d",
+              "name": "original_subject",
+              "value": "={{ $node[\"Gmail Trigger\"].data.Subject }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1036,
+        -40
+      ],
+      "id": "444b4a7b-7226-491c-97b7-c80b69fe9004",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3e7f13e3-15cc-40a4-8e27-b4b9cff4d316",
+              "name": "reply_text",
+              "value": "=reply_text: ご担当者様\\n\\nお問い合わせありがとうございます。いただいた内容について、担当者が確認して個別にご回答いたします。お返事までお時間をいただく場合がございますが、何卒ご了承ください。\\nよろしくお願いいたします。\\n\\ncategory: その他  original_subject: {{ $node[\"Gmail Trigger\"\n].data.Subject }} ",
+              "type": "string"
+            },
+            {
+              "id": "16e2cb1a-7a84-44a8-accb-1bf58b72b407",
+              "name": "category",
+              "value": "その他",
+              "type": "string"
+            },
+            {
+              "id": "6ad20a10-0204-4d7c-9f92-90c77d893948",
+              "name": "original_subject",
+              "value": "={{ $node[\"Gmail Trigger\"].data.Subject }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1036,
+        160
+      ],
+      "id": "77d4deac-b5c7-47d0-9bef-26d51aa72181",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0913J9BX5X",
+          "mode": "list",
+          "cachedResultName": "お問い合わせ対応"
+        },
+        "messageType": "block",
+        "blocksUi": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"📧 メール返信承認\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"送信者:\\n{{ $('Pre-process').item.json.From }}\"\n        },\n        {\n          \"type\": \"mrkdwn\", \n          \"text\": \"件名:\\n{{ $('Pre-process').item.json.Subject.replace(/¥/g, '円') }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"分類:\\n{{ $json.category }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"処理時刻:\\n{{ new Date().toLocaleString('ja-JP') }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": {{ JSON.stringify(\"📝 返信案:\\n\\n\" + $json.reply_text) }}\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"✅ 承認して送信\"\n          },\n          \"action_id\": \"approve_email\",\n          \"style\": \"primary\",\n          \"value\": \"{{ $node['Gmail Trigger'].json.id }}\"\n        },\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"❌ 却下\"\n          },\n          \"action_id\": \"reject_email\",\n          \"style\": \"danger\",\n          \"value\": \"{{ $node['Gmail Trigger'].json.id }}\"\n        }\n      ]\n    }\n  ]\n}",
+        "text": "メール返信承認が必要です",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1334,
+        -240
+      ],
+      "id": "4fe98f73-4695-415e-9090-72f0268bdf44",
+      "name": "Slack",
+      "webhookId": "4ccd4845-0809-495f-92d1-8159773fdf17",
+      "credentials": {
+        "slackApi": {
+          "id": "eCrEGi1lG9Gdq01Y",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/slack-interactions",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        980
+      ],
+      "id": "726ea4f0-4da6-42ca-b173-130bd4ada587",
+      "name": "Slack-Button-Handler",
+      "webhookId": "c1fad5de-dfca-4855-b982-d7eaa43f3cae"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gmail Triggerからのデータを正規化し、空のフィールドにデフォルト値を設定\nconst gmailData = $input.all()[0].json;\n\n// JSON安全化関数：特殊文字をエスケープ\nfunction sanitizeForJson(text) {\n  if (!text) return '';\n  \n  return text\n    .replace(/\\\\/g, '\\\\\\\\')   // バックスラッシュを最初にエスケープ\n    .replace(/\"/g, '\\\\\"')     // ダブルクォートをエスケープ\n    .replace(/\\n/g, '\\\\n')    // 改行をエスケープ\n    .replace(/\\r/g, '\\\\r')    // 復帰文字をエスケープ\n    .replace(/\\t/g, '\\\\t')    // タブをエスケープ\n    .trim();                  // 前後の空白を削除\n}\n\n// デフォルト値を設定した正規化されたデータを作成\nconst normalizedData = {\n  // 元のデータをすべて保持\n  ...gmailData,\n  \n  // 空の場合にデフォルト値を設定 + JSON安全化\n  Subject: sanitizeForJson(gmailData.Subject) || '(件名なし)',\n  From: sanitizeForJson(gmailData.From) || '(送信者不明)',\n  To: sanitizeForJson(gmailData.To) || '(宛先不明)',\n  Body: sanitizeForJson(gmailData.Body || gmailData.TextPlain) || '(本文なし)',\n  Date: gmailData.Date || new Date().toISOString(),\n  MessageId: gmailData.MessageId || gmailData['Message-ID'] || 'unknown'\n};\n\n// ログ出力（デバッグ用）\nconsole.log('=== Gmail Data Normalization ===');\nconsole.log('Original From:', gmailData.From);\nconsole.log('Sanitized From:', normalizedData.From);\nconsole.log('Original Subject:', gmailData.Subject);\nconsole.log('Sanitized Subject:', normalizedData.Subject);\nconsole.log('Has Special Characters:', /[\"\\\\]/.test(gmailData.From || ''));\n\nreturn [{ json: normalizedData }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        -40
+      ],
+      "id": "a0b7d344-e75f-4744-bd6d-c3148e5cef76",
+      "name": "Pre-process"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "67972fcb-ff6c-4ae0-be0c-ab6541a2ba0d",
+                    "leftValue": "={{ $json.action_id === \"approve_email\" }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f8e3762c-7542-4a69-80fb-d6e8b7e0f187",
+                    "leftValue": "={{ $json.action_id === \"reject_email\" }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        440,
+        980
+      ],
+      "id": "3304e183-268e-4e04-afab-66a81184ad77",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $json.channel_id }}",
+          "mode": "id"
+        },
+        "ts": "={{ $json.original_payload.message.ts }}",
+        "messageType": "block",
+        "blocksUi": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"❌ メール返信却下\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"送信者:\\n{{ $json.sender }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"件名:\\n{{ $json.subject }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"却下者:\\n<@{{ $json.user_id }}>\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"却下時刻:\\n{{ new Date().toLocaleString('ja-JP') }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"_この返信は却下されました。必要に応じて手動で対応してください。_\"\n      },\n      \"accessory\": {\n        \"type\": \"button\",\n        \"text\": {\n          \"type\": \"plain_text\",\n          \"text\": \"📧 Gmailで確認\",\n          \"emoji\": true\n        },\n        \"url\": \"{{ $json.gmail_url }}\",\n        \"action_id\": \"open_gmail\"\n      }\n    }\n  ]\n}",
+        "updateFields": {},
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        660,
+        1080
+      ],
+      "id": "84181e8a-2d77-49f5-b063-605497e5352b",
+      "name": "却下通知",
+      "webhookId": "b780bc3d-b25d-41d7-8319-45bc1516b91c",
+      "credentials": {
+        "slackApi": {
+          "id": "eCrEGi1lG9Gdq01Y",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $node[\"Pre-process1\"].json.channel_id }}",
+          "mode": "id"
+        },
+        "ts": "={{ $node[\"Pre-process1\"].json.original_payload.message.ts }}",
+        "messageType": "block",
+        "blocksUi": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"✅ メール送信完了\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"送信先:\\n{{ $node[\"Pre-process1\"].json.sender }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"件名:\\nRe: {{ $node[\"Pre-process1\"].json.subject }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"承認者:\\n<@{{ $node[\"Pre-process1\"].json.user_id }}>\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"送信時刻:\\n{{ new Date().toLocaleString('ja-JP') }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"✅ *メールが正常に送信されました。*\"\n      }\n    }\n]\n}",
+        "updateFields": {},
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        880,
+        880
+      ],
+      "id": "11130888-b352-4739-9574-ee9a3f8e423d",
+      "name": "送信済みの通知",
+      "webhookId": "545d9493-5606-426f-bc96-e4b796ba7e9e",
+      "credentials": {
+        "slackApi": {
+          "id": "eCrEGi1lG9Gdq01Y",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Slackペイロードをパースして構造化\nconst body = $input.all()[0].json.body;\n\n// payloadが存在しない場合のエラー処理\nif (!body.payload) {\n  return [{\n    json: {\n      error: \"No payload found\",\n      originalBody: body\n    }\n  }];\n}\n\nlet payload;\ntry {\n  payload = JSON.parse(body.payload);\n} catch (error) {\n  return [{\n    json: {\n      error: \"Failed to parse payload\",\n      originalBody: body,\n      parseError: error.message\n    }\n  }];\n}\n\n// 必要な情報を抽出・整理\nconst action = payload.actions && payload.actions[0];\nconst messageBlocks = payload.message && payload.message.blocks;\n\n// メッセージ内容の抽出\nlet senderEmail = \"\";\nlet subjectInfo = \"\";\nlet replyText = \"\";\n\nif (messageBlocks && messageBlocks.length > 1) {\n  // 送信者情報の抽出とクリーンアップ\n  if (messageBlocks[1].fields && messageBlocks[1].fields[0]) {\n    const rawSender = messageBlocks[1].fields[0].text.split('\\n')[1] || \"\";\n    \n    // HTMLエンティティをデコード\n    const decodedSender = rawSender\n      .replace(/\"/g, '')\n      .replace(/&lt;/g, '<')\n      .replace(/&gt;/g, '>');\n    \n    // Slackのmailtoリンク形式を処理: <mailto:email|display>\n    const mailtoMatch = decodedSender.match(/<mailto:([^|]+)\\|([^>]+)>/);\n    if (mailtoMatch) {\n      senderEmail = mailtoMatch[1];\n    } else {\n      // 通常の Name <email@example.com> 形式\n      const emailMatch = decodedSender.match(/<([^>]+)>/);\n      if (emailMatch) {\n        senderEmail = emailMatch[1]; // メールアドレス部分のみ抽出\n      } else {\n        // メールアドレスのみの場合\n        senderEmail = decodedSender.trim();\n      }\n    }\n  }\n  \n  // 件名情報の抽出\n  if (messageBlocks[1].fields && messageBlocks[1].fields[1]) {\n    subjectInfo = messageBlocks[1].fields[1].text.split('\\n')[1] || \"\";\n  }\n  \n  // 返信テキストの抽出とHTML変換\n  if (messageBlocks[2] && messageBlocks[2].text) {\n    const fullText = messageBlocks[2].text.text;\n    const replyMatch = fullText.match(/reply_text:\\s*(.*?)\\s*category:/s);\n    let rawReplyText = replyMatch ? replyMatch[1].trim() : \"\";\n    \n    // 改行をHTMLタグに変換してJSON安全にする\n    replyText = rawReplyText\n      .replace(/\\r\\n/g, '\\n')           // Windows改行を統一\n      .replace(/\\r/g, '\\n')             // Mac改行を統一\n      .split('\\n')                      // 改行で分割\n      .map(line => line.trim())         // 各行の前後空白削除\n      .filter(line => line.length > 0)  // 空行削除\n      .map(line => `<p>${line}</p>`)    // 各行をpタグで囲む\n      .join('');                        // 結合\n  }\n}\n\n// 構造化されたデータを返す\nreturn [{\n  json: {\n    // アクション情報\n    action_id: action ? action.action_id : null,\n    button_value: action ? action.value : null,\n    \n    // ユーザー・チャンネル情報\n    user_id: payload.user ? payload.user.id : null,\n    channel_id: payload.channel ? payload.channel.id : null,\n    trigger_id: payload.trigger_id || null,\n    response_url: payload.response_url || null,\n    \n    // メッセージ情報\n    sender: senderEmail, // メールアドレスのみ\n    subject: subjectInfo,\n    reply_text: replyText, // HTML形式に変換済み\n    \n    // 原本データ（必要時参照用）\n    original_payload: payload,\n    \n    // GmailのURL\n    gmail_url: action && action.value ? \n      `https://mail.google.com/mail/u/0/#inbox/${action.value}` : \n      null,\n    \n    // 処理時刻\n    processed_at: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        980
+      ],
+      "id": "b1bdc80c-6e2b-429b-95da-453d9b85c76f",
+      "name": "Pre-process1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": \"info@workflow-pro.com\",\n  \"to\": [\"{{ $json.sender }}\"],\n  \"subject\": \"{{ $json.subject }}\",\n  \"html\": \"{{ $json.reply_text }}\",\n  \"metadata\": {\n    \"slack_data\": {\n      \"sender\": \"{{ $json.sender }}\",\n      \"subject\": \"{{ $json.subject }}\",\n      \"user_id\": \"{{ $json.user_id }}\",\n      \"channel_id\": \"{{ $json.channel_id }}\",\n      \"message_ts\": \"{{ $json.original_payload.message.ts }}\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        880
+      ],
+      "id": "7a8b89db-e232-4bc7-a2b2-13f51698a40a",
+      "name": "Send the Email",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "xXnHzGBUXQYDJarW",
+          "name": "Resend"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1036,
+        360
+      ],
+      "id": "d52855de-3bfa-4ade-926d-f749766c8624",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1169761c-7e02-474c-b453-efd1766b11bc",
+              "name": "reply_text",
+              "value": "=ご担当者様\\n\\nお問い合わせありがとうございます。 \n\\nご請求いただいた資料につきまして、以下よりダウンロードいただけます。\\n資料ダウンロード：https://example.com/documents\\n何かご不明な点がございましたら、お気軽にお声がけください。\\nよろしくお願いいたします。",
+              "type": "string"
+            },
+            {
+              "id": "37fcca9f-f4bc-4fd7-a30a-f06c6fb2aeeb",
+              "name": "category",
+              "value": "=資料請求",
+              "type": "string"
+            },
+            {
+              "id": "7fdf1e9a-f3ca-4c36-8dc4-2eeb0d91d95f",
+              "name": "original_subject",
+              "value": "={{ $node[\"Gmail Trigger\"].data.Subject }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1036,
+        -440
+      ],
+      "id": "823db373-dd25-4c78-a56f-2ea8be6913e9",
+      "name": "資料請求"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1a632bef-7def-4294-8f6d-3dd40cd818d4",
+              "name": "reply_text",
+              "value": "=reply_text:  ご担当者様\\n\\nお問い合わせありがとうございます。\\nいただいたご質問について、詳しく調査してご回答いたします。  ※この返信は後でDify RAGの結果に置き換えられます※  \\nよろしくお願いいたします。  category: 質問関連  original_subject: {{ $('Gmail Trigger').item.json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "df37374f-3223-4eac-a385-3b98f90e6c1b",
+              "name": "original_subject",
+              "value": "={{ $node[\"Gmail Trigger\"].data.Subject }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1036,
+        -240
+      ],
+      "id": "89113447-ecd5-48cb-9c5e-20115fe15fa8",
+      "name": "クライアントからの質問"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=以下の顧客からの質問に対して、提供される文書を参照して正確に回答してください。\n\n【顧客情報】\n差出人: {{ $('Gmail Trigger').item.json.From }}\n件名: {{ $('Gmail Trigger').item.json.Subject }}\n\n【質問内容】\n{{ $('Gmail Trigger').item.json.snippet }}\n\n【回答ルール】\n1. 文書に記載されている情報のみを使用して回答\n2. 文書に記載がない場合は「申し訳ございませんが、詳細については別途確認させていただきます」と回答\n3. 丁寧で分かりやすい日本語で回答\n4. 必要に応じて関連情報も補足",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1256,
+        60
+      ],
+      "id": "df203c4b-9e19-4437-b914-f648f85c5174",
+      "name": "RAG Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {
+          "temperature": {}
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        280
+      ],
+      "id": "8619b29f-53da-4034-a4ac-31bcc97c2a13",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "oViNDGJqnvl0hhbF",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        620
+      ],
+      "id": "4c4afdc4-3990-4b62-a030-c807d6a7efcd",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1soA-d9IpBDpj28AMhsaRLOXtL0dNul2j",
+          "mode": "list",
+          "cachedResultName": "参照資料_例.pdf",
+          "cachedResultUrl": "https://drive.google.com/file/d/1soA-d9IpBDpj28AMhsaRLOXtL0dNul2j/view?usp=drivesdk"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        220,
+        620
+      ],
+      "id": "858220ef-93eb-42b0-a617-3af5eec57086",
+      "name": "Google Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "89AhIGlkPFv7nKCb",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        440,
+        620
+      ],
+      "id": "6673048f-a237-4b91-a38d-06165d7164db",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "// PDFから抽出されたテキストを取得\nconst allItems = $input.all();\nconst text = allItems[0].json.text;\nconsole.log('テキスト総文字数:', text.length);\n\n// テキストが空の場合はエラー\nif (!text || !text.trim()) {\n  throw new Error('PDFからテキストが抽出されていません');\n}\n\n// JSON エスケープ関数\nfunction escapeJsonString(str) {\n  return str\n    .replace(/\\\\/g, '\\\\\\\\')    // バックスラッシュをエスケープ\n    .replace(/\"/g, '\\\\\"')      // ダブルクォートをエスケープ\n    .replace(/\\n/g, ' ')       // 改行を半角スペースに変換\n    .replace(/\\r/g, ' ')       // キャリッジリターンを半角スペースに変換\n    .replace(/\\t/g, ' ')       // タブを半角スペースに変換\n    .replace(/\\f/g, ' ')       // フォームフィードを半角スペースに変換\n    .replace(/\\b/g, ' ')       // バックスペースを半角スペースに変換\n    .replace(/\\s+/g, ' ')      // 連続する空白文字を1つのスペースに統合\n    .trim();                   // 前後の空白を削除\n}\n\n// テキストをチャンクに分割（安全な方法）\nconst chunkSize = 500;\nconst chunks = [];\n\nconsole.log('チャンク処理開始...');\n\n// 単純に500文字ずつ分割\nfor (let i = 0; i < text.length; i += chunkSize) {\n  const chunk = text.slice(i, i + chunkSize).trim();\n  \n  if (chunk.length > 0) {\n    // JSON エスケープ処理を適用\n    const escapedChunk = escapeJsonString(chunk);\n    \n    chunks.push({\n      pageContent: escapedChunk,\n      metadata: {\n        chunk_index: chunks.length,\n        source: 'pdf_document',\n        chunk_size: escapedChunk.length,\n        start_position: i\n      }\n    });\n    \n    console.log(`チャンク${chunks.length}作成 (${escapedChunk.length}文字)`);\n  }\n}\n\nconsole.log(`生成されたチャンク数: ${chunks.length}`);\nconsole.log('最初のチャンク:', chunks[0]?.pageContent.substring(0, 50) + '...');\n\nconst result = chunks.map(chunk => ({ json: chunk }));\nconsole.log('最終出力準備完了');\n\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        620
+      ],
+      "id": "86626049-87a2-4867-ab1e-4e19a4704632",
+      "name": "テキストをチャンクに分割"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": {\n    \"parts\": [\n      {\n        \"text\": \"{{ $json.pageContent }}\"\n      }\n    ]\n  }\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        620
+      ],
+      "id": "bd265345-e8e5-4ef8-bd76-ea1078e797f6",
+      "name": "HTTP Request to Google Embedding",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "xXnHzGBUXQYDJarW",
+          "name": "Resend"
+        },
+        "httpHeaderAuth": {
+          "id": "iTm9UMY02CZhN4I5",
+          "name": "Google AI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// 正しいアプローチ: 前のノードを参照してembeddingとチャンクを合わせる\n\n// 現在のアイテムからembeddingを取得\nconst embedding = $json.embedding ? $json.embedding.values : null;\n\n// 現在のアイテムインデックスを取得\nconst currentIndex = $itemIndex;\n\n// 前のノード「テキストをチャンクに分割」から対応するチャンクを取得\nconst allChunks = $(\"テキストをチャンクに分割\").all();\nconst chunkText = allChunks[currentIndex].json.pageContent;\n\nconsole.log(`Processing chunk ${currentIndex}: ${chunkText.substring(0, 50)}...`);\nconsole.log(`Embedding length: ${embedding ? embedding.length : 'none'}`);\n\n// Document形式で出力\nreturn {\n    pageContent: chunkText,\n    metadata: {\n        chunkIndex: currentIndex,\n        timestamp: new Date().toISOString(),\n        source: 'google_drive_pdf'\n    },\n    embedding: embedding\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        620
+      ],
+      "id": "adcc071d-9b91-447b-9968-fcb9fdab7de8",
+      "name": "Google Embedding APIの出力とチャンクデータを統合"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "memoryKey": {
+          "__rl": true,
+          "value": "=vector_store_key",
+          "mode": "id"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.2,
+      "position": [
+        1320,
+        620
+      ],
+      "id": "d62794ab-7425-4f7b-bf11-f745f559effb",
+      "name": "Simple Vector Store"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Pre-process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "資料請求",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "クライアントからの質問",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pre-process": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack-Button-Handler": {
+      "main": [
+        [
+          {
+            "node": "Pre-process1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Send the Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "却下通知",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pre-process1": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the Email": {
+      "main": [
+        [
+          {
+            "node": "送信済みの通知",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "資料請求": {
+      "main": [
+        [
+          {
+            "node": "Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "クライアントからの質問": {
+      "main": [
+        [
+          {
+            "node": "RAG Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "RAG Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "テキストをチャンクに分割",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "テキストをチャンクに分割": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request to Google Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request to Google Embedding": {
+      "main": [
+        [
+          {
+            "node": "Google Embedding APIの出力とチャンクデータを統合",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Embedding APIの出力とチャンクデータを統合": {
+      "main": [
+        [
+          {
+            "node": "Simple Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "db6ef0fa-8c4e-411a-b104-bee3f484784d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a17405cf09e39ddc1a91d2d5324a5112905aaf8308696f1df377b8f4d0c3e670"
+  },
+  "id": "wu9UkkgEKuz0cDFR",
+  "tags": []
+}
