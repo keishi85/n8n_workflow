@@ -10,17 +10,26 @@ services:
     environment:
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
       - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=${N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS}
+      - N8N_MCP_SERVER_ENABLED=true
       - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
       - GOOGLE_SERVICE_ACCOUNT_EMAIL=${GOOGLE_SERVICE_ACCOUNT_EMAIL}
       - GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY_ID=${GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY_ID}
       - GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY=${GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY}
       # - GOOGLE_REFRESH_TOKEN=${GOOGLE_REFRESH_TOKEN}
       - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - CHANNEL_ACCESS_TOKEN=${CHANNEL_ACCESS_TOKEN}
+      - DEEPL_API_KEY=${DEEPL_API_KEY}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
     env_file:
       - .env
     volumes:
       # n8nの設定データやワークフローデータを永続化するためのボリューム
       - n8n_personal:/home/node/.n8n
+    
+  tunnel:
+    image: cloudflare/cloudflared
+    restart: always
+    command: tunnel run --token ${CLOUDFLARE_TOKEN}
 
 volumes:
   n8n_personal:

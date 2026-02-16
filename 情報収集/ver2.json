@@ -1,0 +1,852 @@
+{
+  "name": "情報収集",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -280,
+        1070
+      ],
+      "id": "3ad36e1a-0c90-49c4-8529-efcdc7cbb194",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09G4UG7SHH",
+          "mode": "list",
+          "cachedResultName": "logs-n8n-情報収集"
+        },
+        "text": "=🚨 N8N Workflow Error\n\n📋 **Workflow**: {{ $json.workflow.name }}\n⏰ **Time**: {{ $now.format('YYYY-MM-DD HH:mm:ss') }}\n❌ **Error**: {{ $json.execution.error.message }}\n\n確認をお願いします",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -60,
+        1070
+      ],
+      "id": "4c881f7a-0d70-4af6-ab8e-7a5aa2684a81",
+      "name": "エラー通知",
+      "webhookId": "b7c5efa0-3d78-4fb1-be5c-8e9158893372",
+      "credentials": {
+        "slackApi": {
+          "id": "Y6uNQ7oR37FzygW2",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -280,
+        560
+      ],
+      "id": "d0880581-2d81-4159-86a4-2f3eff30b662",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "17Grn2VZcH58Lmag2s9J-Ka4vyP8U0u_sg_3WY6Ttcl8",
+          "mode": "list",
+          "cachedResultName": "[n8n]情報収集管理",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17Grn2VZcH58Lmag2s9J-Ka4vyP8U0u_sg_3WY6Ttcl8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "RSS情報源管理",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17Grn2VZcH58Lmag2s9J-Ka4vyP8U0u_sg_3WY6Ttcl8/edit#gid=0"
+        },
+        "options": {
+          "returnFirstMatch": false
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -60,
+        560
+      ],
+      "id": "457b64b8-7ddd-4ce0-9059-29ae84841123",
+      "name": "RSS情報源管理シート読み取り",
+      "retryOnFail": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "KrXyaGMvofIepAzn",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 有効なRSS情報源のみ抽出\nconsole.log($(\"RSS情報源管理シート読み取り\").all());\nconst validRssFeeds = $(\"RSS情報源管理シート読み取り\").all().filter(item => \n  item.json[\"有効/無効\"] === '有効'\n).map(item => ({\n  category: item.json.カテゴリ,\n  source_name: item.json.情報源名,\n  rss_url: item.json[\"RSS URL\"],\n  priority: item.json.優先度 || 1\n}));\n\nreturn validRssFeeds;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        560
+      ],
+      "id": "0070271d-122c-44a7-811d-37c44eaf74e2",
+      "name": "有効RSS抽出"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        380,
+        560
+      ],
+      "id": "683bc356-ea3e-4913-b678-e08bb04c4e87",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.rss_url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.1,
+      "position": [
+        600,
+        560
+      ],
+      "id": "1da69501-7eb6-4b47-8a06-f27e07a5b650",
+      "name": "RSS Read",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1日以内の記事のみ抽出\nconst oneDayAgo = new Date();\noneDayAgo.setDate(oneDayAgo.getDate() - 30);\nconst recentArticles = items.filter(item => {\n  const pubDate = new Date(item.json.pubDate || item.json.isoDate);\n  return pubDate >= oneDayAgo;\n});\nconsole.log(`全記事: ${items.length}, 1日以内: ${recentArticles.length} (${$input.first().json.source_name})`);\n\nreturn recentArticles;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        820,
+        560
+      ],
+      "id": "4ce540c2-641c-4206-b06a-e85c93973425",
+      "name": "1日分記事フィルタ"
+    },
+    {
+      "parameters": {
+        "jsCode": "// RSS記事データを統一フォーマットに整形\nconst sourceInfo = $(\"Loop Over Items\").first().json;\n\nreturn items.map(item => ({\n  title: item.json.title,\n  description: item.json.description || item.json.summary || item.json.contentSnippet,\n  link: item.json.link,\n  pubDate: item.json.pubDate || item.json.isoDate,\n  category: sourceInfo.category,\n  source_name: sourceInfo.source_name,\n  priority: sourceInfo.priority,\n  collected_at: new Date().toISOString(),\n  processed: false,\n  guid: item.json.guid || item.json.link  // 重複判定用\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        560
+      ],
+      "id": "43c85efc-0029-44fb-9bd5-c167476aa645",
+      "name": "データ整形"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 全ての記事を取得して言語判定\nconst articles = $input.all();\n\nconst englishArticles = [];\nconst japaneseArticles = [];\n\narticles.forEach(item => {\n  const title = item.json.title || '';\n  const description = item.json.description || '';\n  const text = (title + ' ' + description);\n  \n  // 日本語文字（ひらがな、カタカナ、漢字）の存在をチェック\n  const hasJapanese = /[\\u3040-\\u309F\\u30A0-\\u30FF\\u4E00-\\u9FAF]/.test(text);\n  \n  if (hasJapanese) {\n    // 日本語記事\n    japaneseArticles.push({\n      ...item.json,\n      needsTranslation: false\n    });\n  } else {\n    // 英語記事（翻訳が必要）\n    englishArticles.push({\n      ...item.json,\n      needsTranslation: true\n    });\n  }\n});\n\nconsole.log(`総記事数: ${articles.length}`);\nconsole.log(`英語記事: ${englishArticles.length} (翻訳対象)`);\nconsole.log(`日本語記事: ${japaneseArticles.length} (翻訳不要)`);\n\n// 全記事を統合して返す（翻訳フラグ付き）\nreturn [...englishArticles, ...japaneseArticles];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        560
+      ],
+      "id": "44a6e726-d17c-4df1-8a77-8e1c98d33b62",
+      "name": "言語判定"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-free.deepl.com/v2/translate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"text\": [\"{{$json.title}}\", \"{{$json.description}}\"],\n    \"source_lang\": \"EN\",\n    \"target_lang\": \"JA\"\n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        735
+      ],
+      "id": "43a62036-a5e7-46b3-9d58-56b56d1c29c2",
+      "name": "DeepL APIで翻訳",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MmeFePgqotWSOhI2",
+          "name": "DeepL API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 3,
+        "options": {
+          "reset": "={{ false }}"
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1700,
+        735
+      ],
+      "id": "69b07e88-1b34-4fce-8a70-6c0f266b85ab",
+      "name": "記事をバッチごとに処理"
+    },
+    {
+      "parameters": {
+        "amount": 0
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2360,
+        810
+      ],
+      "id": "4074b656-e518-4ceb-94ad-2012f79b530f",
+      "name": "Wait",
+      "webhookId": "9bb33a53-b426-4270-aa76-d6a257aa54c9"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        535
+      ],
+      "id": "11adf79c-368e-421e-90ac-5efb8087357f",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2140,
+        460
+      ],
+      "id": "c0c46911-b398-4b55-978b-f177c9127f56",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "873a3bc0-d44c-4f58-affc-e6b3ae31f4cc",
+              "leftValue": "={{ $json.needsTranslation }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1480,
+        560
+      ],
+      "id": "35c9fb80-edbb-4757-a21a-b02f1f607c4f",
+      "name": "翻訳が必要かどうか"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        2360,
+        460
+      ],
+      "id": "8d7e13cf-ad4d-4add-b221-3d672167dcd3",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"title\": {{ JSON.stringify($('記事をバッチごとに処理').item.json.title) }},\n  \"description\": {{ JSON.stringify($('記事をバッチごとに処理').item.json.description) }},\n  \"link\": {{ JSON.stringify($('記事をバッチごとに処理').item.json.link) }},\n  \"pubDate\": {{ JSON.stringify($('記事をバッチごとに処理').item.json.pubDate) }},\n  \"category\": {{ JSON.stringify($('記事をバッチごとに処理').item.json.category) }},\n  \"source_name\": {{ JSON.stringify($('記事をバッチごとに処理').item.json.source_name) }},\n  \"priority\": {{ JSON.stringify($('記事をバッチごとに処理').item.json.priority) }},\n  \"collected_at\": {{ JSON.stringify($('記事をバッチごとに処理').item.json.collected_at) }},\n  \"translated_title\": {{ JSON.stringify($json.translations[0].text) }},\n  \"translated_description\": {{ JSON.stringify($json.translations[1].text) }},\n  \"language\": \"ja\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2140,
+        735
+      ],
+      "id": "0f18ef3f-c689-449e-92a7-c82740c48bc3",
+      "name": "翻訳結果統合用",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"node_type\": \"Set\",\n  \"node_name\": \"AI処理結果を統合・整形\",\n  \"settings\": {\n    \"keep_only_set\": true,\n    \"values\": {\n      \"日付\": \"{{ DateTime.fromHTTP($('Split Out').item.json.pubDate).toFormat('yyyy/M/d') }}\",\n      \"カテゴリ\": {{ JSON.stringify($('Split Out').item.json.category) }},\n      \"元記事タイトル\": {{ JSON.stringify($('Split Out').item.json.title + '(' + $('Split Out').item.json.translated_title + ')') }},\n      \"元記事URL\": {{ JSON.stringify($('Split Out').item.json.link) }},\n      \"X用投稿文\": {{ JSON.stringify($json.X) }},\n      \"Facebook用投稿文\": {{ JSON.stringify($json.Facebook) }},\n      \"Threads用投稿文\": {{ JSON.stringify($json.Threads) }},\n      \"ハッシュタグ\": \"\",\n      \"推奨画像プロンプト\": \"\",\n      \"X投稿済み\": \"\",\n      \"Facebook投稿済み\": \"\",\n      \"Threads投稿済み\": \"\",\n      \"記事内容\": {{ JSON.stringify($('Split Out').item.json.translated_description) }},\n      \"備考\": \"\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3020,
+        460
+      ],
+      "id": "4d96f21a-a869-44b5-b4b0-8ccf3cb8d357",
+      "name": "投稿コンテンツ生成シートに記録するための整形"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "17Grn2VZcH58Lmag2s9J-Ka4vyP8U0u_sg_3WY6Ttcl8",
+          "mode": "list",
+          "cachedResultName": "[n8n]情報収集管理",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17Grn2VZcH58Lmag2s9J-Ka4vyP8U0u_sg_3WY6Ttcl8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 27400371,
+          "mode": "list",
+          "cachedResultName": "投稿コンテンツ生成結果",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17Grn2VZcH58Lmag2s9J-Ka4vyP8U0u_sg_3WY6Ttcl8/edit#gid=27400371"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "日付": "={{ $json.settings.values[\"日付\"] }}",
+            "カテゴリ": "={{ $json.settings.values[\"カテゴリ\"] }}",
+            "元記事タイトル": "={{ $json.settings.values[\"元記事タイトル\"] }}",
+            "元記事URL": "={{ $json.settings.values[\"元記事URL\"] }}",
+            "推奨画像プロンプト": "=",
+            "備考": "={{ $json.settings.values[\"備考\"] }}",
+            "記事内容": "={{ $json.settings.values[\"記事内容\"] }}",
+            "X用投稿文": "={{ $json.settings.values[\"X用投稿文\"] }}",
+            "Facebook用投稿文": "={{ $json.settings.values[\"Facebook用投稿文\"] }}",
+            "Threads用投稿文": "={{ $json.settings.values[\"Threads用投稿文\"] }}",
+            "投稿したかどうか": "未投稿"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "日付",
+              "displayName": "日付",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "カテゴリ",
+              "displayName": "カテゴリ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "元記事タイトル",
+              "displayName": "元記事タイトル",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "元記事URL",
+              "displayName": "元記事URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "X用投稿文",
+              "displayName": "X用投稿文",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Threads用投稿文",
+              "displayName": "Threads用投稿文",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Facebook用投稿文",
+              "displayName": "Facebook用投稿文",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "推奨画像プロンプト",
+              "displayName": "推奨画像プロンプト",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "投稿したかどうか",
+              "displayName": "投稿したかどうか",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "記事内容",
+              "displayName": "記事内容",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "備考",
+              "displayName": "備考",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        3240,
+        460
+      ],
+      "id": "90c7e6c0-6884-427c-8a3b-04c2bff52b36",
+      "name": "投稿生成コンテンツシートに記録",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "KrXyaGMvofIepAzn",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 入力データから記事情報を取得（制限: 最大15件）\nconst allArticles = $input.all();\nconst maxArticles = 15; // Slack APIの50ブロック制限に対応\nconst articles = allArticles.slice(0, maxArticles);\n\n// ヘッダーブロック\nconst blocks = [\n  {\n    \"type\": \"header\",\n    \"text\": {\n      \"type\": \"plain_text\",\n      \"text\": `📰 AI・N8N情報収集結果 (${articles.length}/${allArticles.length}件)`,\n      \"emoji\": true\n    }\n  },\n  {\n    \"type\": \"context\",\n    \"elements\": [\n      {\n        \"type\": \"mrkdwn\",\n        \"text\": `📅 ${new Date().toLocaleString('ja-JP')} | 🤖 自動収集システム`\n      }\n    ]\n  },\n  {\n    \"type\": \"divider\"\n  }\n];\n\n// 各記事のセクションブロックを生成\narticles.forEach((article, index) => {\n  // 記事内容を制限（セクションブロックの文字数制限に対応）\n  const maxContentLength = 150; // さらに短縮\n  const content = article.json.記事内容 || '';\n  const truncatedContent = content.length > maxContentLength \n    ? content.substring(0, maxContentLength) + '...' \n    : content;\n  \n  // タイトルも制限\n  const maxTitleLength = 80;\n  const title = article.json.元記事タイトル || '';\n  const truncatedTitle = title.length > maxTitleLength \n    ? title.substring(0, maxTitleLength) + '...' \n    : title;\n\n  // 記事セクション（メタデータと統合）\n  blocks.push({\n    \"type\": \"section\",\n    \"text\": {\n      \"type\": \"mrkdwn\",\n      \"text\": `*${index + 1}. ${truncatedTitle}*\\n${truncatedContent}\\n\\n_📅 ${article.json.日付} | 🏷️ ${article.json.カテゴリ || 'AI関連'}_`\n    },\n    \"accessory\": {\n      \"type\": \"button\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"記事を読む\",\n        \"emoji\": true\n      },\n      \"url\": article.json.元記事URL,\n      \"action_id\": `read_article_${index}`\n    }\n  });\n\n  // 記事間の区切り（最後の記事以外）\n  if (index < articles.length - 1) {\n    blocks.push({\n      \"type\": \"divider\"\n    });\n  }\n});\n\n// 件数が制限を超えている場合の注意書き\nif (allArticles.length > maxArticles) {\n  blocks.push({\n    \"type\": \"context\",\n    \"elements\": [\n      {\n        \"type\": \"mrkdwn\",\n        \"text\": `⚠️ 全${allArticles.length}件中、上位${maxArticles}件のみ表示しています。`\n      }\n    ]\n  });\n}\n\n// メッセージサイズチェック（概算）\nconst messageSize = JSON.stringify({ blocks }).length;\nconsole.log(`メッセージサイズ: ${messageSize} bytes / 16KB制限`);\n\n// 16KB制限チェック（安全マージン含む）\nif (messageSize > 14000) { // 14KBで警告\n  console.warn('メッセージサイズが大きすぎます。記事数をさらに減らすことを推奨します。');\n}\n\nreturn { blocks };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3460,
+        460
+      ],
+      "id": "9b294eac-dd07-4fb0-93f2-31ab326a9338",
+      "name": "記事内容に関するSlack Block Kitを作成"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09G8KJU6NR",
+          "mode": "list",
+          "cachedResultName": "daily-info-bot"
+        },
+        "messageType": "block",
+        "blocksUi": "={{ $json }}",
+        "text": "AI・N8N・Dify情報収集結果",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        3680,
+        460
+      ],
+      "id": "bc7ea1ad-4dbc-4dfd-8fbb-d9f8d707dcb0",
+      "name": "記事を通知",
+      "webhookId": "3267b477-fd8f-4d76-a79f-2a4d3fc14a91",
+      "credentials": {
+        "slackApi": {
+          "id": "Y6uNQ7oR37FzygW2",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.mistral.ai/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "mistralCloudApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"mistral-medium-latest\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Workflow-pro代表の金子慧士として、記事内容を情報密度の高い投稿に変換する。\\n\\n【文体ルール】\\n- 敬語なし、感情表現なし\\n- 事実を箇条書きで整理\\n- 「○○が発表」「新機能として」「追加要素：」等の事務的表現\\n- 絵文字なし、シンプルに情報のみ\\n\\n【情報整理方法】\\n- 核心情報を1-3項目で列挙\\n- 中小企業での活用方法を1行で追記\\n- n8n/Dify関連の場合は連携可能性に言及\\n\\n【文字数厳守】\\n- X: 180文字以内\\n- Facebook: 250文字以内\\n- Threads: 250文字以内\\n\\n【記事内容の必須活用】\\n記事の具体的な数値、機能名、事例を必ず含める\\n\\n【JSON形式で返答】\\n{\\n  \\\"X\\\": \\\"投稿文\\\",\\n  \\\"Facebook\\\": \\\"投稿文\\\",\\n  \\\"Threads\\\": \\\"投稿文\\\"\\n}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"記事タイトル: ${$('Split Out').item.json.translated_title}\\n記事内容: ${$('Split Out').item.json.translated_description}\\n元記事URL: ${$('Split Out').item.json.link}\\nカテゴリ: ${$('Split Out').item.json.category}\\n\\n記事の具体的な情報（数値、機能名、事例等）を箇条書きで整理し、中小企業での活用方法を併記した投稿を作成。\"\n    }\n  ],\n  \"response_format\": {\n    \"type\": \"json_object\"\n  },\n  \"temperature\": 0.6,\n  \"max_tokens\": 600\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2580,
+        460
+      ],
+      "id": "6b7a00c1-00e2-438a-8917-24ac33af8e50",
+      "name": "Mistral APIからSNS投稿のための文章を生成",
+      "retryOnFail": true,
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "mJYNNF2qxM4wajyx",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// シンプルで確実なJSON解析関数\nfunction parseAiJson(jsonString) {\n  try {\n    // まず普通にパースを試行\n    return JSON.parse(jsonString);\n  } catch (error) {\n    // 失敗したら改行文字のみクリーニングしてリトライ\n    const cleaned = jsonString.replace(/[\\r\\n\\t]/g, ' ').replace(/\\s+/g, ' ');\n    return JSON.parse(cleaned);\n  }\n}\n\n// JSON内で問題となる文字をエスケープする関数\nfunction escapeForJson(str) {\n  if (typeof str !== 'string') return str;\n  return str\n    .replace(/\\\\/g, '\\\\\\\\')  // バックスラッシュ\n    .replace(/\"/g, '\\\\\"')    // 二重引用符\n    .replace(/\\n/g, '\\\\n')   // 改行\n    .replace(/\\r/g, '\\\\r')   // キャリッジリターン\n    .replace(/\\t/g, '\\\\t');  // タブ\n}\n\n// メイン処理\nconst processedItems = [];\n\nfor (const item of items) {\n  try {\n    const aiResponse = item.json.choices[0].message.content;\n    const parsedData = parseAiJson(aiResponse);\n    \n    processedItems.push({\n      json: {\n        X: escapeForJson(parsedData.X || \"\"),\n        Facebook: escapeForJson(parsedData.Facebook || \"\"),\n        Threads: escapeForJson(parsedData.Threads || \"\")\n      }\n    });\n  } catch (error) {\n    processedItems.push({\n      json: {\n        X: \"エラー\",\n        Facebook: \"エラー\", \n        Threads: \"エラー\",\n        errorDetails: error.message\n      }\n    });\n  }\n}\n\nreturn processedItems;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2800,
+        460
+      ],
+      "id": "d21ea5de-cf64-46ce-8916-4a966867cfad",
+      "name": "回答を整形"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "エラー通知",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "RSS情報源管理シート読み取り",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS情報源管理シート読み取り": {
+      "main": [
+        [
+          {
+            "node": "有効RSS抽出",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "有効RSS抽出": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "RSS Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read": {
+      "main": [
+        [
+          {
+            "node": "1日分記事フィルタ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1日分記事フィルタ": {
+      "main": [
+        [
+          {
+            "node": "データ整形",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "データ整形": {
+      "main": [
+        [
+          {
+            "node": "言語判定",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "言語判定": {
+      "main": [
+        [
+          {
+            "node": "翻訳が必要かどうか",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "記事をバッチごとに処理": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DeepL APIで翻訳",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepL APIで翻訳": {
+      "main": [
+        [
+          {
+            "node": "翻訳結果統合用",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "記事をバッチごとに処理",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "翻訳が必要かどうか": {
+      "main": [
+        [
+          {
+            "node": "記事をバッチごとに処理",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Mistral APIからSNS投稿のための文章を生成",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "翻訳結果統合用": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "投稿コンテンツ生成シートに記録するための整形": {
+      "main": [
+        [
+          {
+            "node": "投稿生成コンテンツシートに記録",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "投稿生成コンテンツシートに記録": {
+      "main": [
+        [
+          {
+            "node": "記事内容に関するSlack Block Kitを作成",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "記事内容に関するSlack Block Kitを作成": {
+      "main": [
+        [
+          {
+            "node": "記事を通知",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mistral APIからSNS投稿のための文章を生成": {
+      "main": [
+        [
+          {
+            "node": "回答を整形",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "回答を整形": {
+      "main": [
+        [
+          {
+            "node": "投稿コンテンツ生成シートに記録するための整形",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "bbbad95c-cbee-4fd0-85f3-d5d1a88ad75a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a17405cf09e39ddc1a91d2d5324a5112905aaf8308696f1df377b8f4d0c3e670"
+  },
+  "id": "QNTEQKuRu7M3Zxs9",
+  "tags": []
+}

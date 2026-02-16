@@ -1,0 +1,527 @@
+{
+  "name": "自動広告バナー作成",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -220
+      ],
+      "id": "a171f410-a6b0-45de-a04f-5b5d9a814faa",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "value": "1Iv36Wf09XCYVu2DuQzOwUUhS5so9F6E_TRkPxj2UmeI",
+          "mode": "list",
+          "cachedResultName": "n8n | 広告バナー",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Iv36Wf09XCYVu2DuQzOwUUhS5so9F6E_TRkPxj2UmeI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "NanoBanana_Ad_Master",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Iv36Wf09XCYVu2DuQzOwUUhS5so9F6E_TRkPxj2UmeI/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        220,
+        -220
+      ],
+      "id": "61116798-a641-4f20-aa1b-e1066eeab37d",
+      "name": "Google Sheetsから商品情報を取得",
+      "credentials": {
+        "googleApi": {
+          "id": "ERPoYC7F5239S5DX",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=以下の情報から、Nano Banana Pro用の画像生成プロンプトを作成せよ。\n\n- 商品名: {{ $json[\"商品名\"] }}\n- 特徴: {{ $json[\"商品の特徴\"] }}\n- ターゲット: {{ $json[\"ターゲット\"] }}\n- 世界観: {{ $json[\"世界観\"] }}\n- メインコピー: {{ $json[\"メインコピー\"] }}\n\n出力は必ず以下のJSON形式のみで回答すること：\n{\n  \"image_prompt\": \"英語での詳細な画像描写プロンプト\",\n  \"render_text\": \"画像内に描画する正確なコピー内容\"\n}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are a world-class Creative Director and expert Prompt Engineer for high-end advertising. Your task is to take raw product information and translate it into precise instructions for Google's Imagen 3 API to generate a stunning, cinematic advertising banner that includes text.\n\n### YOUR GOAL:\nCreate a JSON object containing two distinct parts:\n1.  `image_prompt`: A detailed, vivid description for the AI photographer. It must specify a high-end, cinematic advertising aesthetic, ensure the product is the hero, and define lighting/mood that matches the target audience. **Crucially, you must explicitly instruct the AI to leave negative space for text placement.**\n2.  `render_text`: The exact text string to be rendered onto the image by the API's text rendering engine.\n\n### INPUT DATA EXAMPLE:\n- Product: Ultimate Spice Curry\n- Target: 30s-40s particular male\n- Mood/Setting: Midnight sanctuary, dark, cinematic, golden steam, quiet city view.\n- Copy: \"Awaken your senses, artistry in black.\"\n\n### OUTPUT JSON FORMAT (STRICTLY ENFORCE THIS):\n```json\n{\n  \"output\": {\n    \"image_prompt\": \"A cinematic advertising photograph of [Product] as the hero shot. [Detailed setting description based on mood]. [Specific lighting instructions, e.g., dramatic chiaroscuro, rim lighting]. The composition is elegant and high-end, with intentional negative space in the [top/bottom/left/right] area to accommodate advertisement text. The overall aesthetic is luxurious, editorial, and highly polished designed for [Target Audience]. Film grain, 8k resolution.\",\n    \"render_text\": {\n      \"text\": \"[Insert the exact main copy here]\"\n    }\n  }\n}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        660,
+        -220
+      ],
+      "id": "a43b4f7e-911b-4399-a6d1-24500599a016",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "projectId": {
+          "__rl": true,
+          "value": "personal-n8n-473112",
+          "mode": "list",
+          "cachedResultName": "personal n8n"
+        },
+        "modelName": "gemini-2.5-pro",
+        "options": {
+          "maxOutputTokens": 4096,
+          "temperature": 0.8
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleVertex",
+      "typeVersion": 1,
+      "position": [
+        688,
+        0
+      ],
+      "id": "85da2030-1b63-4423-90f8-a51ec57d6339",
+      "name": "Google Vertex Chat Model",
+      "credentials": {
+        "googleApi": {
+          "id": "ERPoYC7F5239S5DX",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"image_prompt\": \"英語の詳細な画像描写プロンプトが入ります\",\n  \"render_text\": {\n    \"text\": \"表示するメインコピー\",\n    \"font_style\": \"フォントの指定\",\n    \"position\": \"配置場所の指定\"\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        808,
+        0
+      ],
+      "id": "bea39686-3b90-485e-af41-4f5e85cefdb7",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Google Sheetsから商品情報を取得').item.json[\"製品画像URL\"] }}",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1036,
+        -220
+      ],
+      "id": "ac171772-43fd-4f5a-90bc-388e3f08875f",
+      "name": "Google Drive (画像を取得)",
+      "credentials": {
+        "googleApi": {
+          "id": "ERPoYC7F5239S5DX",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://us-central1-aiplatform.googleapis.com/v1/projects/personal-n8n-473112/locations/us-central1/publishers/google/models/imagen-4.0-ultra-generate-001:predict",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ \nJSON.stringify({\n  \"instances\": [\n    {\n      \"prompt\": $('Basic LLM Chain').item.json.output.image_prompt,\n      \"reference_images\": [ // snake_case に変更\n        {\n          \"reference_id\": \"1\", \n          \"reference_type\": \"CONTROL_IMAGE\",\n          \"image\": {\n            // 修正ポイント: ここを bytes_base64_encoded (snake_case) にします\n            \"bytes_base64_encoded\": $('Google Drive (画像を取得)').item.binary.data.data\n          }\n        }\n      ]\n    }\n  ],\n  \"parameters\": {\n    \"sampleCount\": 1,\n    \"aspectRatio\": \"1:1\",\n    \"sampleImageSize\": \"2K\",\n    \"addWatermark\": false,\n    \"textRenderingConfig\": {\n       \"text\": $('Basic LLM Chain').item.json.output.render_text.text\n    }\n  }\n})\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1256,
+        -220
+      ],
+      "id": "755a537f-e984-41c4-9752-db69a5f8bb5b",
+      "name": "HTTP Request (画像生成)",
+      "credentials": {
+        "googleApi": {
+          "id": "ERPoYC7F5239S5DX",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "predictions[0].bytesBase64Encoded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1476,
+        -220
+      ],
+      "id": "31101e90-69aa-4a67-acd1-6923e472079c",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Google Sheetsから商品情報を取得').item.json['商品名'] }}_広告バナー.png",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1KnL2zfUaofVOCp5ke85PbiPCpe8m2a_U",
+          "mode": "list",
+          "cachedResultName": "自動作成",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1KnL2zfUaofVOCp5ke85PbiPCpe8m2a_U"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1696,
+        -220
+      ],
+      "id": "7617bbea-a79e-46ba-a255-be4f4f1e32f4",
+      "name": "Google DriveへUpload",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "x2u1Ekaa9kmHH0Kg",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1Iv36Wf09XCYVu2DuQzOwUUhS5so9F6E_TRkPxj2UmeI",
+          "mode": "list",
+          "cachedResultName": "n8n | 広告バナー",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Iv36Wf09XCYVu2DuQzOwUUhS5so9F6E_TRkPxj2UmeI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "NanoBanana_Ad_Master",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Iv36Wf09XCYVu2DuQzOwUUhS5so9F6E_TRkPxj2UmeI/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "商品名": "={{ $('Google Sheetsから商品情報を取得').item.json[\"商品名\"] }}",
+            "完成画像URL": "={{ $json.webViewLink }}",
+            "ステータス": "Completed"
+          },
+          "matchingColumns": [
+            "商品名"
+          ],
+          "schema": [
+            {
+              "id": "商品名",
+              "displayName": "商品名",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "商品の特徴",
+              "displayName": "商品の特徴",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ターゲット",
+              "displayName": "ターゲット",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "世界観",
+              "displayName": "世界観",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "メインコピー",
+              "displayName": "メインコピー",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "製品画像URL",
+              "displayName": "製品画像URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ステータス",
+              "displayName": "ステータス",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "完成画像URL",
+              "displayName": "完成画像URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "実行ログ",
+              "displayName": "実行ログ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1916,
+        -220
+      ],
+      "id": "eb94dce8-983d-474e-8406-cf7c1b4a8b43",
+      "name": "GoogleシートにURLを記載",
+      "credentials": {
+        "googleApi": {
+          "id": "ERPoYC7F5239S5DX",
+          "name": "Google Service Account account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f8e9728e-4da6-4f5e-af85-d5777a03021b",
+              "leftValue": "={{ $json['ステータス'] }}",
+              "rightValue": "Ready",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "b3288ca5-a07c-4559-8f9c-3a85c7324bc1",
+              "leftValue": "={{ $json['ステータス'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        -220
+      ],
+      "id": "403d6057-7d11-4b72-8c19-99a758a34b7b",
+      "name": "Filter"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Google Sheetsから商品情報を取得",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheetsから商品情報を取得": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Vertex Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Google Drive (画像を取得)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive (画像を取得)": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (画像生成)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request (画像生成)": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Google DriveへUpload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google DriveへUpload": {
+      "main": [
+        [
+          {
+            "node": "GoogleシートにURLを記載",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1866ec1e-8e26-440a-872c-8e3cdb693754",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a17405cf09e39ddc1a91d2d5324a5112905aaf8308696f1df377b8f4d0c3e670"
+  },
+  "id": "ZYu31pg6TLeo1xxK",
+  "tags": []
+}

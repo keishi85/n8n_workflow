@@ -1,0 +1,2080 @@
+{
+  "name": "お問い合わせ対応 [プロパゲート]",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=以下の顧客からのお問い合わせに対して、提供される文書を参照してビジネスメール形式で丁寧に回答してください。\n\n【顧客情報】\n差出人: {{ $json.From }}\n件名: {{ $json.Subject }}\n\n【お問い合わせ内容】\n{{ $json.Body }}\n\n【回答形式】\n以下の形式でビジネスメールとして回答してください：\n\n{{ $json.From }} 様\n\nいつもお世話になっております。\n\n[件名に関する適切な返信内容]\n\n[文書を参照した具体的な回答内容]\n\nご不明な点がございましたら、お気軽にお問い合わせください。\n\n今後ともよろしくお願いいたします。\n\n【回答ルール】\n1. 【重要】文書に記載されている情報のみを使用して正確に回答\n2. 【重要】文書に記載がない場合は「申し訳ございませんが、詳細につきましては確認の上、改めてご連絡させていただきます」\n3. 【禁止】「〜ですね」などのくだけた表現は使用しない\n4. 敬語を適切に使用し、ビジネスメールとして適切な敬意を示す\n5. 必要に応じて関連情報も補足するが、文書の範囲内で行う\n6. 相手の名前は差出人情報から取得し、「様」を付けて宛名とする\n7. 【禁止】文書にない情報について推測、判断、独自の表現をすることを一切禁止\n8. 【禁止】定型文以外の表現で「情報がない」旨を伝えることを禁止",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -1044,
+        3600
+      ],
+      "id": "71ebaaa0-e813-4c0f-b6ef-fc109fbdb15c",
+      "name": "RAG｜メール対応"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1060,
+        3820
+      ],
+      "id": "3cf403fb-3e35-4051-86f4-9f0ee59b9fba",
+      "name": "Google Gemini Chat Model4",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "F9ZNcBqBmV5OG1jP",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2600,
+        2840
+      ],
+      "id": "19ecc3c8-b6ee-4bd9-9c79-207596e09d05",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1jgz9fO8SnOqTckH9_A_MiUuF7At91Jwv",
+          "mode": "list",
+          "cachedResultName": "プロパゲート_顧客対応.pdf",
+          "cachedResultUrl": "https://drive.google.com/file/d/1jgz9fO8SnOqTckH9_A_MiUuF7At91Jwv/view?usp=drivesdk"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -2380,
+        2840
+      ],
+      "id": "a4ae47fe-c61b-44f7-9953-1cb1a50929c0",
+      "name": "Google Drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "x2u1Ekaa9kmHH0Kg",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {
+          "queryName": "match_documents"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.2,
+      "position": [
+        -2144,
+        2840
+      ],
+      "id": "35166043-5eb5-4acc-b56d-325ba721da94",
+      "name": "Supabase Vector Store",
+      "credentials": {
+        "supabaseApi": {
+          "id": "wfwaSwY29sG7eaO8",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/text-embedding-004"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -2160,
+        3060
+      ],
+      "id": "d4dc702f-2fd3-4458-bfd7-331ed30d58e0",
+      "name": "Embeddings Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "F9ZNcBqBmV5OG1jP",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        -2040,
+        3062.5
+      ],
+      "id": "5c9b588a-b222-45d3-80cf-d70c2504f364",
+      "name": "Default Data Loader1"
+    },
+    {
+      "parameters": {
+        "chunkSize": 500,
+        "chunkOverlap": 50,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        -1952,
+        3260
+      ],
+      "id": "e11594a4-c1d9-46a3-a0c6-e6da97d8ee48",
+      "name": "Recursive Character Text Splitter"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C09CALQQ5MH",
+          "mode": "list",
+          "cachedResultName": "なんでも出力チャンネル"
+        },
+        "text": "RAGに使用する資料のアップデータが完了しました！！",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -1664,
+        2840
+      ],
+      "id": "47c9e53e-469b-4691-ad66-b124a62993e8",
+      "name": "RAGで使用する資料のアップデート完了！",
+      "webhookId": "b40c77a6-5319-4cca-a667-877a89a362e0",
+      "executeOnce": true,
+      "credentials": {
+        "slackApi": {
+          "id": "Y6uNQ7oR37FzygW2",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "/slack-interactions",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2600,
+        5720
+      ],
+      "id": "cd734abd-864b-4cc6-b263-6cf38112181d",
+      "name": "Slack-Button-Handler",
+      "webhookId": "c1fad5de-dfca-4855-b982-d7eaa43f3cae"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "q": "-from:info@workflow-pro.com"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2600,
+        3600
+      ],
+      "id": "7bec1eac-880c-43e2-9809-ba79970c40a7",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ugTNKvkFQc5HKryR",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $node[\"Pre-process | メール\"].json.channel_id }}",
+          "mode": "id"
+        },
+        "ts": "={{ $node[\"Pre-process | メール\"].json.original_payload.message.ts }}",
+        "messageType": "block",
+        "blocksUi": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"✅ メール送信完了\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"送信先:\\n{{ $node[\"Pre-process | メール\"].json.sender }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"件名:\\nRe: {{ $node[\"Pre-process | メール\"].json.subject }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"承認者:\\n<@{{ $node[\"Pre-process | メール\"].json.user_id }}>\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"送信時刻:\\n{{ new Date().toLocaleString('ja-JP', {\n  timeZone: 'Asia/Tokyo',\n  year: 'numeric',\n  month: '2-digit',\n  day: '2-digit',\n  hour: '2-digit',\n  minute: '2-digit'\n}) }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"✅ *メールが正常に送信されました。*\"\n      }\n    }\n]\n}",
+        "updateFields": {},
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -620,
+        5020
+      ],
+      "id": "36600de1-5d37-4c09-a7b0-3f60894f6bfd",
+      "name": "送信済みの通知",
+      "webhookId": "545d9493-5606-426f-bc96-e4b796ba7e9e",
+      "credentials": {
+        "slackApi": {
+          "id": "Y6uNQ7oR37FzygW2",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $json.channel_id }}",
+          "mode": "id"
+        },
+        "ts": "={{ $json.original_payload.message.ts }}",
+        "messageType": "block",
+        "blocksUi": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"❌ メール返信却下\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"送信者:\\n{{ $json.sender }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"件名:\\n{{ $json.subject }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"却下者:\\n<@{{ $json.user_id }}>\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"却下時刻:\\n{{ new Date().toLocaleString('ja-JP', {\n  timeZone: 'Asia/Tokyo',\n  year: 'numeric',\n  month: '2-digit',\n  day: '2-digit',\n  hour: '2-digit',\n  minute: '2-digit'\n}) }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"_この返信は却下されました。必要に応じて手動で対応してください。_\"\n      },\n      \"accessory\": {\n        \"type\": \"button\",\n        \"text\": {\n          \"type\": \"plain_text\",\n          \"text\": \"📧 Gmailで確認\",\n          \"emoji\": true\n        },\n        \"url\": \"{{ $json.gmail_url }}\",\n        \"action_id\": \"open_gmail\"\n      }\n    }\n  ]\n}",
+        "updateFields": {},
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -840,
+        5420
+      ],
+      "id": "5ec22319-8a94-4566-aa54-f92f68d4ef54",
+      "name": "却下通知",
+      "webhookId": "b780bc3d-b25d-41d7-8319-45bc1516b91c",
+      "credentials": {
+        "slackApi": {
+          "id": "Y6uNQ7oR37FzygW2",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $json.id }}",
+        "message": "={{ $json.reply_text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -840,
+        5020
+      ],
+      "id": "9ce17360-83b8-49af-b4ba-1cee1746e34c",
+      "name": "Gmailで送信",
+      "webhookId": "5b295988-1257-44e0-949b-1ddf2af444a9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ugTNKvkFQc5HKryR",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const trigger_id = $input.all()[0].json.trigger_id;\nconst email_id = $input.all()[0].json.button_value;\nconst channel_id = $input.all()[0].json.channel_id;\nconst message_ts = $input.all()[0].json.original_payload.container.message_ts;\nconst token = $env.SLACK_BOT_TOKEN;\n\nconst view = {\n  type: \"modal\",\n  callback_id: \"edit_email_modal\",\n  private_metadata: JSON.stringify({\n    email_id: email_id,\n    channel_id: channel_id,        // 追加\n    message_ts: message_ts         // 追加\n  }),\n  title: {\n    type: \"plain_text\",\n    text: \"メール内容編集\"\n  },\n  submit: {\n    type: \"plain_text\",\n    text: \"保存\"\n  },\n  close: {\n    type: \"plain_text\",\n    text: \"キャンセル\"\n  },\n  blocks: [\n    {\n      type: \"input\",\n      block_id: \"email_content_block\",\n      label: {\n        type: \"plain_text\",\n        text: \"メール内容\"\n      },\n      element: {\n        type: \"plain_text_input\",\n        action_id: \"email_content_input\",\n        multiline: true,\n        initial_value: $input.all()[0].json.reply_text,\n        placeholder: {\n          type: \"plain_text\",\n          text: \"メールの内容を入力してください\"\n        }\n      }\n    }\n  ]\n};\n\nconst response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://slack.com/api/views.open',\n  headers: {\n    'Authorization': `Bearer ${token}`,\n    'Content-Type': 'application/json; charset=utf-8'\n  },\n  body: {\n    trigger_id: trigger_id,\n    view: view\n  }\n});\n\nreturn [{ json: response }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -840,
+        5220
+      ],
+      "id": "82051dd5-a5fd-4fe8-bf4e-0eb3d0481382",
+      "name": "編集するBlockの送信"
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $input.all()[0].json;\n\n// view_submissionの場合の処理\nif (payload.type === 'view_submission') {  \n  return [{\n    json: {\n      id: payload.id,           // {{ $json.id }} に対応\n      reply_text: payload.edited_content,  // {{ $json.reply_text }} に対応\n      user_id: payload.user_id,\n      channel_id: payload.channel_id,\n      message_ts: payload.message_ts,\n      timestamp: new Date().toISOString()\n    }\n  }];\n}\n\n// view_submissionでない場合は空を返す\nreturn [{ json: {} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -840,
+        5620
+      ],
+      "id": "da27a135-9c34-448a-b6e1-0cb0680fd66a",
+      "name": "編集済みメールの前処理"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $node[\"Pre-process | メール\"].json.channel_id }}",
+          "mode": "id"
+        },
+        "ts": "={{ $node[\"Pre-process | メール\"].json.message_ts }}",
+        "messageType": "block",
+        "blocksUi": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"✅ メール送信完了\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"送信先:\\n{{ $node[\"Pre-process | メール\"].json.sender }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"件名:\\nRe: {{ $node[\"Pre-process | メール\"].json.subject }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"承認者:\\n<@{{ $node[\"Pre-process | メール\"].json.user_id }}>\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"処理時刻:\\n{{ new Date().toLocaleString('ja-JP', {\n  timeZone: 'Asia/Tokyo',\n  year: 'numeric',\n  month: '2-digit',\n  day: '2-digit',\n  hour: '2-digit',\n  minute: '2-digit'\n}) }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"✅ *メールが正常に送信されました。*\"\n      }\n    }\n]\n}",
+        "updateFields": {},
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -400,
+        5620
+      ],
+      "id": "13e5d1d8-1107-4168-9763-2f57d1a57ee6",
+      "name": "編集した内容で送信したことを通知",
+      "webhookId": "545d9493-5606-426f-bc96-e4b796ba7e9e",
+      "credentials": {
+        "slackApi": {
+          "id": "Y6uNQ7oR37FzygW2",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1WJqTEJao9tLpmn_ryJCg4g9nNpIVQ_fmxoGs-cHWkkU",
+          "mode": "list",
+          "cachedResultName": "お問い合わせ｜ブロックシート",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WJqTEJao9tLpmn_ryJCg4g9nNpIVQ_fmxoGs-cHWkkU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "シート1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WJqTEJao9tLpmn_ryJCg4g9nNpIVQ_fmxoGs-cHWkkU/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -1720,
+        3600
+      ],
+      "id": "abeb14cf-4013-4675-a0d0-583caaa905a8",
+      "name": "ブロックするメールアドレスを取得",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "KrXyaGMvofIepAzn",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 「データ前処理」ノードからのメールデータを取得\nconst emailData = $node[\"データ前処理\"].json;\nconst senderEmail = emailData.From;\n\n// Google Sheetsからのブロックリストを取得（直前のノード）\nconst blockListRows = $input.all();\n\n// ブロックリストからメールアドレス配列を作成\nconst blockedEmails = blockListRows\n  .map(item => (item.json[\"ブロックするメールアドレス\"] || '').toLowerCase().trim())  // ✅ 正しいフィールド名\n  .filter(email => email.length > 0);\n\n// デバッグ用（確認後削除）\nconsole.log('送信者メール:', senderEmail);\nconsole.log('ブロックリスト:', blockedEmails);\n\n// 判定実行\nconst isBlocked = blockedEmails.includes(senderEmail);\n\nreturn [{\n  json: {\n    ...emailData,\n    isBlocked: isBlocked,\n    blockReason: isBlocked ? `メールアドレス ${senderEmail} がブロックリストに含まれています` : null\n  },\n  pairedItem: { item: 0, input: 0 }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1500,
+        3600
+      ],
+      "id": "5d7faa6c-542f-4856-840a-4afe6f2c72a5",
+      "name": "ブロックするメールかどうかを判定"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gmail Triggerからのデータを正規化し、空のフィールドにデフォルト値を設定\nconst gmailData = $input.all()[0].json;\n// JSON安全化関数：特殊文字をエスケープ\nfunction sanitizeForJson(text) {\n  if (!text) return '';\n\n  return text\n    .replace(/\\\\/g, '\\\\\\\\')   // バックスラッシュを最初にエスケープ\n    .replace(/\"/g, '\\\\\"')     // ダブルクォートをエスケープ\n    .replace(/\\n/g, '\\\\n')    // 改行をエスケープ\n    .replace(/\\r/g, '\\\\r')    // 復帰文字をエスケープ\n    .replace(/\\t/g, '\\\\t')    // タブをエスケープ\n    .trim();                  // 前後の空白を削除\n}\n// デフォルト値を設定した正規化されたデータを作成\nconst normalizedData = {\n  // 元のデータをすべて保持\n  ...gmailData,\n\n  // 空の場合にデフォルト値を設定 + JSON安全化\n  Subject: sanitizeForJson(gmailData.Subject) || '(件名なし)',\n  From: sanitizeForJson(gmailData.From) || '(送信者不明)',\n  To: sanitizeForJson(gmailData.To) || '(宛先不明)',\n  Body: sanitizeForJson(gmailData.Body || gmailData.TextPlain) || '(本文なし)',\n  Date: gmailData.Date || new Date().toISOString(),\n  MessageId: gmailData.MessageId || gmailData['Message-ID'] || 'unknown'\n};\nreturn [{ json: normalizedData }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2380,
+        3600
+      ],
+      "id": "d58e6940-f95a-42ec-ae83-8c929a64e2c5",
+      "name": "データ前処理"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.isBlocked }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false",
+                      "singleValue": true
+                    },
+                    "id": "be36963c-0548-4564-a157-7e87779317b5"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7874edea-2cb5-4952-b579-3d5293604aa9",
+                    "leftValue": "={{ $json.isBlocked }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1280,
+        3600
+      ],
+      "id": "3a28c845-f810-4139-86a0-a976c777f4c8",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "respondWith": "noData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [
+        -2380,
+        5720
+      ],
+      "id": "be67d55d-2915-4eb8-b8c7-01527c38aa6b",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1MRnPzusGjf738y-OhBRwrR-WZ4r2gXTjoSVAnwSE6rU",
+          "mode": "list",
+          "cachedResultName": "顧客情報",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1MRnPzusGjf738y-OhBRwrR-WZ4r2gXTjoSVAnwSE6rU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "シート1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1MRnPzusGjf738y-OhBRwrR-WZ4r2gXTjoSVAnwSE6rU/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -2160,
+        3600
+      ],
+      "id": "117190d9-b9ce-4ace-97c7-ae41a5b97fa0",
+      "name": "メールアドレスから顧客名を取得",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "KrXyaGMvofIepAzn",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 前のノードからメールアドレスを取得（検索対象）\nconst emailData = $input.first().json;\nconst targetEmail = (emailData.FromEmail || emailData.From || '').toLowerCase().trim();\n\n// Google Sheetsからのパートナーリストを取得\nconst partnerListRows = $input.all();\n\n// パートナー情報を検索\nlet partnerName = null;\nlet partnerId = null;\nlet lineUserId = null;\n\nfor (const row of partnerListRows) {\n  const rowData = row.json;\n  const partnerEmail = (rowData[\"メールアドレス\"] || '').toLowerCase().trim();\n  \n  if (partnerEmail && partnerEmail === targetEmail) {\n    partnerName = rowData[\"パートナー名\"] || null;\n    partnerId = rowData[\"row_number\"] || null;\n    lineUserId = rowData[\"LineUserID\"] || null;\n    break; // 一致したら検索終了\n  }\n}\n\nreturn [{\n  json: {\n    ...emailData,\n    // パートナー情報を追加\n    partnerName: partnerName,\n    partnerId: partnerId,\n    lineUserId: lineUserId,\n    isPartner: partnerName !== null,\n    searchEmail: targetEmail\n  },\n  pairedItem: { item: 0, input: 0 }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1940,
+        3600
+      ],
+      "id": "d0e1d795-0c72-4a4b-a78b-99b8ba322b2e",
+      "name": "パートナー名を取得"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1MRnPzusGjf738y-OhBRwrR-WZ4r2gXTjoSVAnwSE6rU",
+          "mode": "list",
+          "cachedResultName": "顧客情報",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1MRnPzusGjf738y-OhBRwrR-WZ4r2gXTjoSVAnwSE6rU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "シート1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1MRnPzusGjf738y-OhBRwrR-WZ4r2gXTjoSVAnwSE6rU/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -2380,
+        4460
+      ],
+      "id": "dded9165-8b5c-4c83-9988-8337bfd8e5a0",
+      "name": "LineIDから顧客名を取得",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "KrXyaGMvofIepAzn",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// LINEのユーザーIDでパートナー情報を検索\nconst webhookData = $('Line Webhook Trigger').first().json.body;\n\n// eventsが存在するかチェック\nif (!webhookData.events || webhookData.events.length === 0) {\n  return { json: { found: false, message: \"メッセージイベントがありません\" } };\n}\n\n// ユーザーIDを取得\nconst lineUserId = webhookData.events[0].source.userId;\n\n// スプレッドシートのデータを取得\nconst sheetData = $input.all()[1].json;\nconst partnerList = Array.isArray(sheetData) ? sheetData : [sheetData];\n\n// 一致するパートナーを探す\nconst foundPartner = partnerList.find(partner => \n  partner.LineUserID && partner.LineUserID.trim() === lineUserId\n);\n\n// 結果を返す\nif (foundPartner) {\n  return {\n    json: {\n      found: true,\n      partnerName: foundPartner[\"パートナー名\"],\n      email: foundPartner[\"メールアドレス\"],\n      lineUserId: lineUserId,\n      text: $('Line Webhook Trigger').first().json.body.events[0].message.text\n    }\n  };\n} else {\n  return {\n    json: {\n      found: false,\n      lineUserId: lineUserId,\n      message: \"該当するパートナーが見つかりません\"\n    }\n  };\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2160,
+        4460
+      ],
+      "id": "bcd0a6c7-c1bd-475e-bc7d-b413999c02de",
+      "name": "LineIDからパートナー名を取得"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "line-webhook-a8f3d9e1-b2c4-4567-8901-234567890abc-secure",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -2600,
+        4460
+      ],
+      "id": "075914f4-84a6-4de3-85d9-1c20c9805bf2",
+      "name": "Line Webhook Trigger",
+      "webhookId": "7927ee17-dd56-45c5-b881-d1bdb7aea5e9"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1940,
+        4680
+      ],
+      "id": "aedc63f8-fe41-40a2-a2d6-c505724e1523",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "F9ZNcBqBmV5OG1jP",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=以下の顧客からのお問い合わせに対して、提供される文書を参照してLINE形式で回答してください。\n\n【顧客情報】\n差出人: {{ $json.partnerName }}\n\n【お問い合わせ内容】\n{{ $json.text }}\n\n【回答形式】\n{{ $json.partnerName }} 様\n\nお疲れ様です。\n\n[回答内容]\n\n【厳格な制約】\n1. 【重要】提供される文書に明確に記載されている情報のみを使用すること\n2. 文書に記載がない場合は、必ず以下の定型文のみを使用すること：\n   「申し訳ございません。詳細を確認の上、改めてご連絡いたします。」\n3. 【禁止】文書にない情報について推測、判断、独自の表現をすることを一切禁止\n4. 【禁止】「持ち合わせておりません」「見当たりません」など定型文以外の表現を禁止\n5. 【禁止】余計な質問や結びの言葉を追加することを禁止\n6. 文書に記載がある場合のみ、LINEらしい適度にカジュアルなビジネス文体を使用\n7. 文書の範囲内でのみ関連情報を補足\n\n【実行ルール】\n- 文書を検索し、関連情報があるかを確認\n- 関連情報がある場合：文書の内容をもとに具体的に回答\n- 関連情報がない場合：定型文のみを出力\n- いかなる場合も文書にない内容は一切含めない",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -1924,
+        4460
+      ],
+      "id": "d9c0304a-e433-47fe-8127-296cc20f865d",
+      "name": "RAG｜Line対応"
+    },
+    {
+      "parameters": {
+        "jsCode": "// LLMの出力からメールアドレス部分を削除\nfor (const item of $input.all()) {\n  // outputフィールドが存在することを確認\n  if (item.json.output) {\n    // 正規表現でメールアドレス部分（<email@domain>形式）を削除\n    const cleanedOutput = item.json.output.replace(/<[^@]+@[^>]+>/g, '');\n    \n    // 連続する半角スペースのみを1つにまとめる（改行は保持）\n    const finalOutput = cleanedOutput.replace(/ {2,}/g, ' ').trim();\n    \n    // 結果を更新\n    item.json.output = finalOutput;\n  }\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -548,
+        3600
+      ],
+      "id": "60b7cc41-a442-449b-b3e6-fd48e25ae138",
+      "name": "LLMの出力を修正"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0913J9BX5X",
+          "mode": "list",
+          "cachedResultName": "お問い合わせ対応"
+        },
+        "messageType": "block",
+        "blocksUi": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"📧 メール返信承認\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"送信者:\\n{{ $('パートナー名を取得').item.json['パートナー名'] }}({{ $('データ前処理').item.json.From }})\"\n        },\n        {\n          \"type\": \"mrkdwn\", \n          \"text\": \"件名:\\n{{ $('データ前処理').item.json.Subject.replace(/¥/g, '円') }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"内容: \\n{{ $('データ前処理').item.json.snippet }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"処理時刻:\\n{{ new Date().toLocaleString('ja-JP', { \n            timeZone: 'Asia/Tokyo',\n            year: 'numeric',\n            month: '2-digit', \n            day: '2-digit',\n            hour: '2-digit',\n            minute: '2-digit'\n          }) }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": {{ JSON.stringify(\"📝 返信案:\\n\\n\" + $json.output) }}\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"依頼種別を選択してください：\"\n      },\n      \"accessory\": {\n        \"type\": \"static_select\",\n        \"action_id\": \"request_type\",\n        \"placeholder\": {\n          \"type\": \"plain_text\",\n          \"text\": \"種別を選択\"\n        },\n        \"options\": [\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"既存サイト修正\"\n            },\n            \"value\": \"site_modification\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"業務依頼\"\n            },\n            \"value\": \"business_request\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"制作進行\"\n            },\n            \"value\": \"production_progress\"\n          }\n        ]\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"依頼状況デモデザイン進捗(z列)を選択してください：\"\n      },\n      \"accessory\": {\n        \"type\": \"static_select\",\n        \"action_id\": \"demo_design_progress_z\",\n        \"placeholder\": {\n          \"type\": \"plain_text\",\n          \"text\": \"進捗を選択\"\n        },\n        \"options\": [\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"未依頼 ヒアリングシート未回答\"\n            },\n            \"value\": \"not_requested\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"デモデザイン制作依頼中\"\n            },\n            \"value\": \"demo_design_requested\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"修正依頼中\"\n            },\n            \"value\": \"modification_requested\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"デモデザイン社内確認完了\"\n            },\n            \"value\": \"internal_confirmation_completed\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"Ad監修者確認済（デモデザイン）\"\n            },\n            \"value\": \"ad_supervisor_confirmed\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"先方提出完了（デモデザイン）\"\n            },\n            \"value\": \"demo_design_submitted\"\n          }\n        ]\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"依頼状況デモサイト進捗(AA列)を選択してください：\"\n      },\n      \"accessory\": {\n        \"type\": \"static_select\",\n        \"action_id\": \"demo_site_progress_aa\",\n        \"placeholder\": {\n          \"type\": \"plain_text\",\n          \"text\": \"進捗を選択\"\n        },\n        \"options\": [\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"デモサイト制作依頼中\"\n            },\n            \"value\": \"demo_site_requested\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"修正依頼中\"\n            },\n            \"value\": \"modification_requested\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"先方提出完了（デモサイト）\"\n            },\n            \"value\": \"demo_site_submitted\"\n          }\n        ]\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"スマホ最適化状況を選択してください：\"\n      },\n      \"accessory\": {\n        \"type\": \"static_select\",\n        \"action_id\": \"mobile_optimization\",\n        \"placeholder\": {\n          \"type\": \"plain_text\",\n          \"text\": \"状況を選択\"\n        },\n        \"options\": [\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"修正依頼中\"\n            },\n            \"value\": \"modification_requested\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"先方提出完了（スマホ最適）\"\n            },\n            \"value\": \"mobile_optimization_submitted\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"ドメイン接続中\"\n            },\n            \"value\": \"domain_connecting\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"先方ドメイン確認中\"\n            },\n            \"value\": \"domain_confirmation\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"公開\"\n            },\n            \"value\": \"published\"\n          }\n        ]\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"担当者を選択してください：\"\n      },\n      \"accessory\": {\n        \"type\": \"users_select\",\n        \"action_id\": \"assign_user\",\n        \"placeholder\": {\n          \"type\": \"plain_text\",\n          \"text\": \"担当者を選択\"\n        }\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"通知先チャンネルを選択（業務依頼の場合）：\"\n      },\n      \"accessory\": {\n        \"type\": \"conversations_select\",\n        \"action_id\": \"notify_channel\",\n        \"placeholder\": {\n          \"type\": \"plain_text\",\n          \"text\": \"チャンネルを選択\"\n        }\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"✅ 承認して送信\"\n          },\n          \"action_id\": \"approve_email\",\n          \"style\": \"primary\",\n          \"value\": \"{{ $node['Gmail Trigger'].json.id }}\"\n        },\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"✏️ 編集\"\n          },\n          \"action_id\": \"edit_email\",\n          \"value\": \"{{ $node['Gmail Trigger'].json.id }}\"\n        },\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"❌ 却下\"\n          },\n          \"action_id\": \"reject_email\",\n          \"style\": \"danger\",\n          \"value\": \"{{ $node['Gmail Trigger'].json.id }}\"\n        }\n      ]\n    }\n  ]\n}",
+        "text": "メール返信承認が必要です",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -328,
+        3600
+      ],
+      "id": "8b6745c0-fd01-426b-b9cc-483e8cc6944e",
+      "name": "通知",
+      "webhookId": "4ccd4845-0809-495f-92d1-8159773fdf17",
+      "credentials": {
+        "slackApi": {
+          "id": "Y6uNQ7oR37FzygW2",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0913J9BX5X",
+          "mode": "list",
+          "cachedResultName": "お問い合わせ対応"
+        },
+        "messageType": "block",
+        "blocksUi": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"🟢 Line返信承認\"\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": {{ JSON.stringify(\"送信者:\\n\" + $('LineIDからパートナー名を取得').item.json.partnerName + \"(\" + $('LineIDからパートナー名を取得').item.json.email + \")\") }}\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": {{ JSON.stringify(\"内容: \\n\" + $('LineIDからパートナー名を取得').item.json.text) }}\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": {{ JSON.stringify(\"処理時刻:\\n\" + new Date().toLocaleString('ja-JP', {\n            timeZone: 'Asia/Tokyo',\n            year: 'numeric',\n            month: '2-digit',\n            day: '2-digit',\n            hour: '2-digit',\n            minute: '2-digit'\n          })) }}\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": {{ JSON.stringify(\"📝 返信案:\\n\\n\" + $json.output) }}\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"依頼種別を選択してください：\"\n      },\n      \"accessory\": {\n        \"type\": \"static_select\",\n        \"action_id\": \"request_type\",\n        \"placeholder\": {\n          \"type\": \"plain_text\",\n          \"text\": \"種別を選択\"\n        },\n        \"options\": [\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"既存サイト修正\"\n            },\n            \"value\": \"site_modification\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"業務依頼\"\n            },\n            \"value\": \"business_request\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"制作進行\"\n            },\n            \"value\": \"production_progress\"\n          }\n        ]\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"依頼状況デモデザイン進捗(z列)を選択してください：\"\n      },\n      \"accessory\": {\n        \"type\": \"static_select\",\n        \"action_id\": \"demo_design_progress_z\",\n        \"placeholder\": {\n          \"type\": \"plain_text\",\n          \"text\": \"進捗を選択\"\n        },\n        \"options\": [\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"未依頼 ヒアリングシート未回答\"\n            },\n            \"value\": \"not_requested\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"デモデザイン制作依頼中\"\n            },\n            \"value\": \"demo_design_requested\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"修正依頼中\"\n            },\n            \"value\": \"modification_requested\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"デモデザイン社内確認完了\"\n            },\n            \"value\": \"internal_confirmation_completed\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"Ad監修者確認済（デモデザイン）\"\n            },\n            \"value\": \"ad_supervisor_confirmed\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"先方提出完了（デモデザイン）\"\n            },\n            \"value\": \"demo_design_submitted\"\n          }\n        ]\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"依頼状況デモサイト進捗(AA列)を選択してください：\"\n      },\n      \"accessory\": {\n        \"type\": \"static_select\",\n        \"action_id\": \"demo_site_progress_aa\",\n        \"placeholder\": {\n          \"type\": \"plain_text\",\n          \"text\": \"進捗を選択\"\n        },\n        \"options\": [\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"デモサイト制作依頼中\"\n            },\n            \"value\": \"demo_site_requested\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"修正依頼中\"\n            },\n            \"value\": \"modification_requested\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"先方提出完了（デモサイト）\"\n            },\n            \"value\": \"demo_site_submitted\"\n          }\n        ]\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"スマホ最適化状況を選択してください：\"\n      },\n      \"accessory\": {\n        \"type\": \"static_select\",\n        \"action_id\": \"mobile_optimization\",\n        \"placeholder\": {\n          \"type\": \"plain_text\",\n          \"text\": \"状況を選択\"\n        },\n        \"options\": [\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"修正依頼中\"\n            },\n            \"value\": \"modification_requested\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"先方提出完了（スマホ最適）\"\n            },\n            \"value\": \"mobile_optimization_submitted\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"ドメイン接続中\"\n            },\n            \"value\": \"domain_connecting\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"先方ドメイン確認中\"\n            },\n            \"value\": \"domain_confirmation\"\n          },\n          {\n            \"text\": {\n              \"type\": \"plain_text\",\n              \"text\": \"公開\"\n            },\n            \"value\": \"published\"\n          }\n        ]\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"担当者を選択してください：\"\n      },\n      \"accessory\": {\n        \"type\": \"users_select\",\n        \"action_id\": \"assign_user\",\n        \"placeholder\": {\n          \"type\": \"plain_text\",\n          \"text\": \"担当者を選択\"\n        }\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"通知先チャンネルを選択（業務依頼の場合）：\"\n      },\n      \"accessory\": {\n        \"type\": \"conversations_select\",\n        \"action_id\": \"notify_channel\",\n        \"placeholder\": {\n          \"type\": \"plain_text\",\n          \"text\": \"チャンネルを選択\"\n        }\n      }\n    },\n    {\n      \"type\": \"actions\",\n      \"elements\": [\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"✅ 承認して送信\"\n          },\n          \"action_id\": \"approve_line\",\n          \"style\": \"primary\",\n          \"value\": {{ JSON.stringify(JSON.stringify({\n            type: 'line',\n            replyToken: $node['Line Webhook Trigger'].json.body.events[0].replyToken,\n            userId: $node['Line Webhook Trigger'].json.body.events[0].source.userId\n          })) }}\n        },\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"✏️ 編集\"\n          },\n          \"action_id\": \"edit_line\",\n          \"value\": {{ JSON.stringify(JSON.stringify({\n            type: 'line',\n            replyToken: $node['Line Webhook Trigger'].json.body.events[0].replyToken,\n            userId: $node['Line Webhook Trigger'].json.body.events[0].source.userId\n          })) }}\n        },\n        {\n          \"type\": \"button\",\n          \"text\": {\n            \"type\": \"plain_text\",\n            \"text\": \"❌ 却下\"\n          },\n          \"action_id\": \"reject_line\",\n          \"style\": \"danger\",\n          \"value\": {{ JSON.stringify(JSON.stringify({\n            type: 'line',\n            replyToken: $node['Line Webhook Trigger'].json.body.events[0].replyToken,\n            userId: $node['Line Webhook Trigger'].json.body.events[0].source.userId\n          })) }}\n        }\n      ]\n    }\n  ]\n}",
+        "text": "メール返信承認が必要です",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -1208,
+        4460
+      ],
+      "id": "aa886c83-11ea-44a4-a764-74b55badd128",
+      "name": "通知 | Line",
+      "webhookId": "4ccd4845-0809-495f-92d1-8159773fdf17",
+      "credentials": {
+        "slackApi": {
+          "id": "Y6uNQ7oR37FzygW2",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// LLMの出力からメールアドレス部分を削除\nfor (const item of $input.all()) {\n  // outputフィールドが存在することを確認\n  if (item.json.output) {\n    // 正規表現でメールアドレス部分（<email@domain>形式）を削除\n    const cleanedOutput = item.json.output.replace(/<[^@]+@[^>]+>/g, '');\n    \n    // 連続する半角スペースのみを1つにまとめる（改行は保持）\n    const finalOutput = cleanedOutput.replace(/ {2,}/g, ' ').trim();\n    \n    // 結果を更新\n    item.json.output = finalOutput;\n  }\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1428,
+        4460
+      ],
+      "id": "e3a4eb2a-bf31-4f26-9755-c32861bf82c3",
+      "name": "LLMの出力を修正 | Line"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "30b35452-4478-44ea-9ec3-38d1c0d54da9",
+                    "leftValue": "={{ $json.notificationType }}",
+                    "rightValue": "email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f86a364d-c1e5-4433-b0f4-2457acada64b",
+                    "leftValue": "={{ $json.notificationType }}",
+                    "rightValue": "line",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1500,
+        5720
+      ],
+      "id": "759bfd04-4426-4e42-a971-4030e21d92f0",
+      "name": "メールとLineの分類"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Slackペイロードをパースして構造化\nconst body = $input.all()[0].json.body;\n\n// payloadが存在しない場合のエラー処理\nif (!body.payload) {\n  return [{\n    json: {\n      error: \"No payload found\",\n      originalBody: body\n    }\n  }];\n}\n\nlet payload;\ntry {\n  payload = JSON.parse(body.payload);\n} catch (error) {\n  return [{\n    json: {\n      error: \"Failed to parse payload\",\n      originalBody: body,\n      parseError: error.message\n    }\n  }];\n}\n\n// メッセージ内容抽出の共通関数\nfunction extractMessageContent(messageBlocks) {\n  let senderEmail = \"\";\n  let subjectInfo = \"\";\n  let replyText = \"\";\n\n  if (messageBlocks && messageBlocks.length > 1) {\n    // 送信者情報の抽出とクリーンアップ\n    if (messageBlocks[1].fields && messageBlocks[1].fields[0]) {\n      const rawSender = messageBlocks[1].fields[0].text.split('\\n')[1] || \"\";\n      \n      // HTMLエンティティをデコード\n      const decodedSender = rawSender\n        .replace(/\"/g, '')\n        .replace(/&lt;/g, '<')\n        .replace(/&gt;/g, '>');\n      \n      // Slackのmailtoリンク形式を処理: <mailto:email|display>\n      const mailtoMatch = decodedSender.match(/<mailto:([^|]+)\\|([^>]+)>/);\n      if (mailtoMatch) {\n        senderEmail = mailtoMatch[1];\n      } else {\n        // 通常の Name <email@example.com> 形式\n        const emailMatch = decodedSender.match(/<([^>]+)>/);\n        if (emailMatch) {\n          senderEmail = emailMatch[1]; // メールアドレス部分のみ抽出\n        } else {\n          // メールアドレスのみの場合\n          senderEmail = decodedSender.trim();\n        }\n      }\n    }\n    \n    // 件名情報の抽出\n    if (messageBlocks[1].fields && messageBlocks[1].fields[1]) {\n      subjectInfo = messageBlocks[1].fields[1].text.split('\\n')[1] || \"\";\n    }\n    \n    // 返信テキストの抽出とHTML変換\n    if (messageBlocks[2] && messageBlocks[2].text) {\n      const fullText = messageBlocks[2].text.text;\n      const replyMatch = fullText.match(/返信案:\\s*(.*?)\\s*$/s);\n      let rawReplyText = replyMatch ? replyMatch[1].trim() : \"\";\n      \n      // 不要な部分を削除\n      rawReplyText = rawReplyText\n        .replace(/^:memo:\\s*返信案:\\s*/, '')     // 先頭の:memo: 返信案:を削除\n        .replace(/^📝\\s*返信案:\\s*/, '')        // 先頭の📝 返信案:を削除\n        .replace(/^返信案:\\s*/, '')             // 先頭の返信案:を削除\n        .replace(/<mailto:[^>]+>\\s*様\\s*/g, '') // <mailto:...> 様 を削除\n        .trim();\n      \n      // 改行をHTMLタグに変換してJSON安全にする\n      replyText = rawReplyText\n        .replace(/\\r\\n/g, '\\n')           // Windows改行を統一\n        .replace(/\\r/g, '\\n')             // Mac改行を統一\n        .split('\\n')                      // 改行で分割\n        .map(line => line.trim())         // 各行の前後空白削除\n        .filter(line => line.length > 0)  // 空行削除\n        .map(line => `<p>${line}</p>`)    // 各行をpタグで囲む\n        .join('');                        // 結合\n    }\n  }\n\n  return { senderEmail, subjectInfo, replyText };\n}\n\n// 共通のレスポンス構築関数\nfunction buildResponse(baseData, messageContent = {}) {\n  return {\n    // アクション情報\n    action_id: baseData.action_id || null,\n    button_value: baseData.button_value || null,\n    type: baseData.type || null,\n    \n    // ユーザー・チャンネル情報\n    user_id: baseData.user_id || null,\n    channel_id: baseData.channel_id || null,\n    trigger_id: baseData.trigger_id || null,\n    response_url: baseData.response_url || null,\n    \n    // メッセージ情報\n    id: baseData.id || null,\n    sender: messageContent.senderEmail || \"\",\n    subject: messageContent.subjectInfo || \"\",\n    reply_text: messageContent.replyText || \"\",\n    \n    // view_submission特有の情報\n    edited_content: baseData.edited_content || null,\n    callback_id: baseData.callback_id || null,\n    message_ts: baseData.message_ts || null,\n    \n    // 原本データ（必要時参照用）\n    original_payload: baseData.original_payload || null,\n    \n    // GmailのURL\n    gmail_url: baseData.gmail_url || null,\n    \n    // 処理時刻\n    processed_at: new Date().toISOString()\n  };\n}\n\n// ペイロードタイプによる処理分岐\nif (payload.type === 'view_submission') {\n  // モーダル送信の場合\n  const private_metadata = JSON.parse(payload.view.private_metadata);\n  const email_id = private_metadata.email_id;\n  const channel_id = private_metadata.channel_id;\n  const message_ts = private_metadata.message_ts;\n  const email_content = payload.view.state.values.email_content_block.email_content_input.value;\n  \n  // private_metadataに元のメッセージ情報も含まれている場合は使用\n  const messageContent = {\n    senderEmail: private_metadata.sender || \"\",\n    subjectInfo: private_metadata.subject || \"\",\n    replyText: private_metadata.reply_text || \"\"\n  };\n  \n  const baseData = {\n    action_id: \"modal_submission\",\n    type: \"view_submission\",\n    id: email_id,\n    edited_content: email_content,\n    user_id: payload.user.id,\n    callback_id: payload.view.callback_id,\n    channel_id: channel_id,\n    message_ts: message_ts,\n    original_payload: payload\n  };\n  \n  return [{ json: buildResponse(baseData, messageContent) }];\n  \n} else if (payload.type === 'block_actions') {\n  // ボタンクリックの場合\n  const action = payload.actions && payload.actions[0];\n  const messageBlocks = payload.message && payload.message.blocks;\n  \n  // メッセージ内容を抽出\n  const messageContent = extractMessageContent(messageBlocks);\n  \n  const baseData = {\n    action_id: action ? action.action_id : null,\n    button_value: action ? action.value : null,\n    type: \"block_actions\",\n    user_id: payload.user ? payload.user.id : null,\n    channel_id: payload.channel ? payload.channel.id : null,\n    trigger_id: payload.trigger_id || null,\n    response_url: payload.response_url || null,\n    id: action ? action.value : null,\n    original_payload: payload,\n    gmail_url: action && action.value ? \n      `https://mail.google.com/mail/u/0/#inbox/${action.value}` : \n      null\n  };\n  \n  return [{ json: buildResponse(baseData, messageContent) }];\n  \n} else {\n  return [{\n    json: {\n      error: \"Unknown payload type\",\n      type: payload.type,\n      original_payload: payload\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1280,
+        5320
+      ],
+      "id": "72e29b30-bed8-4418-85a8-9bcf82df2587",
+      "name": "Pre-process | メール"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Slackペイロードをパースして構造化（LINE対応版）\nconst body = $input.all()[0].json.body;\n\n// payloadが存在しない場合のエラー処理\nif (!body.payload) {\n  return [{\n    json: {\n      error: \"No payload found\",\n      originalBody: body\n    }\n  }];\n}\n\nlet payload;\ntry {\n  payload = JSON.parse(body.payload);\n} catch (error) {\n  return [{\n    json: {\n      error: \"Failed to parse payload\",\n      originalBody: body,\n      parseError: error.message\n    }\n  }];\n}\n\n// LINE用テキスト変換関数\nfunction convertToPlainText(htmlText) {\n  if (!htmlText) return \"\";\n\n  return htmlText\n    .replace(/<[^>]*>/g, '') // HTMLタグ削除\n    .replace(/&lt;/g, '<') // HTMLエンティティデコード\n    .replace(/&gt;/g, '>')\n    .replace(/&amp;/g, '&')\n    .replace(/&quot;/g, '\"')\n    .replace(/&#39;/g, \"'\")\n    .trim();\n}\n\n// 通知タイプ判定関数\nfunction getNotificationType(buttonValue) {\n  if (!buttonValue) return \"unknown\";\n\n  try {\n    const parsed = JSON.parse(buttonValue);\n    return parsed.type || \"unknown\";\n  } catch {\n    return \"unknown\";\n  }\n}\n\n// LINEデータ抽出関数\nfunction extractLineData(buttonValue, replyText) {\n  try {\n    const buttonJson = JSON.parse(buttonValue);\n\n    if (buttonJson.type === \"line\") {\n      const plainText = convertToPlainText(replyText);\n      // ここで改行コードをエスケープ\n      const escapedText = plainText.replace(/\\n/g, '\\\\n');\n\n      return {\n        user_id: buttonJson.userId || null,\n        reply_token: buttonJson.replyToken,\n        message_text: escapedText, // エスケープされたテキストを使用\n        message_length: escapedText.length,\n        ready_for_api: !!(buttonJson.replyToken && escapedText)\n      };\n    }\n  } catch (error) {\n    return {\n      error: \"Failed to parse LINE data\",\n      details: error.message\n    };\n  }\n\n  return null;\n}\n\n// メッセージ内容抽出の共通関数\nfunction extractMessageContent(messageBlocks) {\n  let senderEmail = \"\";\n  let subjectInfo = \"\";\n  let replyText = \"\";\n\n  if (messageBlocks && messageBlocks.length > 1) {\n    // 送信者情報の抽出とクリーンアップ\n    if (messageBlocks[1].fields && messageBlocks[1].fields[0]) {\n      const rawSender = messageBlocks[1].fields[0].text.split('\\n')[1] || \"\";\n\n      // HTMLエンティティをデコード\n      const decodedSender = rawSender\n        .replace(/\"/g, '')\n        .replace(/&lt;/g, '<')\n        .replace(/&gt;/g, '>');\n\n      // Slackのmailtoリンク形式を処理: <mailto:email|display>\n      const mailtoMatch = decodedSender.match(/<mailto:([^|]+)\\|([^>]+)>/);\n      if (mailtoMatch) {\n        senderEmail = mailtoMatch[1];\n      } else {\n        // 通常の Name <email@example.com> 形式\n        const emailMatch = decodedSender.match(/<([^>]+)>/);\n        if (emailMatch) {\n          senderEmail = emailMatch[1]; // メールアドレス部分のみ抽出\n        } else {\n          // メールアドレスのみの場合\n          senderEmail = decodedSender.trim();\n        }\n      }\n    }\n\n    // 件名情報の抽出\n    if (messageBlocks[1].fields && messageBlocks[1].fields[1]) {\n      subjectInfo = messageBlocks[1].fields[1].text.split('\\n')[1] || \"\";\n    }\n\n    // 返信テキストの抽出とHTML変換\n    if (messageBlocks[2] && messageBlocks[2].text) {\n      const fullText = messageBlocks[2].text.text;\n      const replyMatch = fullText.match(/返信案:\\s*(.*?)\\s*$/s);\n      let rawReplyText = replyMatch ? replyMatch[1].trim() : \"\";\n      \n      // 不要な部分を削除\n      rawReplyText = rawReplyText\n        .replace(/^:memo:\\s*返信案:\\s*/, '') // 先頭の:memo: 返信案:を削除\n        .replace(/^📝\\s*返信案:\\s*/, '') // 先頭の📝 返信案:を削除\n        .replace(/^返信案:\\s*/, '') // 先頭の返信案:を削除\n        .replace(/<mailto:[^>]+>\\s*様\\s*/g, '') // <mailto:...> 様 を削除\n        .trim();\n      \n      // 改行コードをJSONで有効なエスケープシーケンスに変換\n      replyText = rawReplyText\n        .replace(/\\r\\n/g, '\\\\n')\n        .replace(/\\r/g, '\\\\n')\n        .replace(/\\n/g, '\\\\n');\n    }\n  }\n\n  return { senderEmail, subjectInfo, replyText };\n}\n\n// 共通のレスポンス構築関数\nfunction buildResponse(baseData, messageContent = {}) {\n  const notificationType = getNotificationType(baseData.button_value);\n\n  // 基本レスポンス\n  const response = {\n    // アクション情報\n    action_id: baseData.action_id || null,\n    button_value: baseData.button_value || null,\n    type: baseData.type || null,\n    notification_type: notificationType,\n\n    // ユーザー・チャンネル情報\n    user_id: baseData.user_id || null,\n    channel_id: baseData.channel_id || null,\n    trigger_id: baseData.trigger_id || null,\n    response_url: baseData.response_url || null,\n\n    // メッセージ情報\n    id: baseData.id || null,\n    sender: messageContent.senderEmail || \"\",\n    subject: messageContent.subjectInfo || \"\",\n    reply_text: messageContent.replyText || \"\",\n\n    // view_submission特有の情報\n    edited_content: baseData.edited_content || null,\n    callback_id: baseData.callback_id || null,\n    message_ts: baseData.message_ts || null,\n\n    // 原本データ（必要時参照用）\n    original_payload: baseData.original_payload || null,\n\n    // GmailのURL\n    gmail_url: baseData.gmail_url || null,\n\n    // 処理時刻\n    processed_at: new Date().toISOString()\n  };\n\n  // LINE用の追加処理\n  if (notificationType === \"line\") {\n    const lineData = extractLineData(baseData.button_value, messageContent.replyText);\n    response.line_data = lineData;\n  }\n\n  return response;\n}\n\n// ペイロードタイプによる処理分岐\nif (payload.type === 'view_submission') {\n  // モーダル送信の場合\n  const private_metadata = JSON.parse(payload.view.private_metadata);\n  const email_id = private_metadata.email_id;\n  const channel_id = private_metadata.channel_id;\n  const message_ts = private_metadata.message_ts;\n  \n  // **修正箇所**：edited_contentをエスケープ\n  const email_content = payload.view.state.values.email_content_block.email_content_input.value.replace(/\\n/g, '\\\\n');\n\n  // private_metadataに元のメッセージ情報も含まれている場合は使用\n  const messageContent = {\n    senderEmail: private_metadata.sender || \"\",\n    subjectInfo: private_metadata.subject || \"\",\n    replyText: private_metadata.reply_text || \"\"\n  };\n\n  const baseData = {\n    action_id: \"modal_submission\",\n    type: \"view_submission\",\n    id: email_id,\n    edited_content: email_content,\n    user_id: payload.user.id,\n    callback_id: payload.view.callback_id,\n    channel_id: channel_id,\n    message_ts: message_ts,\n    original_payload: payload\n  };\n\n  return [{ json: buildResponse(baseData, messageContent) }];\n\n} else if (payload.type === 'block_actions') {\n  // ボタンクリックの場合\n  const action = payload.actions && payload.actions[0];\n  const messageBlocks = payload.message && payload.message.blocks;\n\n  // メッセージ内容を抽出\n  const messageContent = extractMessageContent(messageBlocks);\n\n  const baseData = {\n    action_id: action ? action.action_id : null,\n    button_value: action ? action.value : null,\n    type: \"block_actions\",\n    user_id: payload.user ? payload.user.id : null,\n    channel_id: payload.channel ? payload.channel.id : null,\n    trigger_id: payload.trigger_id || null,\n    response_url: payload.response_url || null,\n    id: action ? action.value : null,\n    original_payload: payload,\n    gmail_url: action && action.value ?\n      `https://mail.google.com/mail/u/0/#inbox/${action.value}` :\n      null\n  };\n\n  return [{ json: buildResponse(baseData, messageContent) }];\n\n} else {\n  return [{\n    json: {\n      error: \"Unknown payload type\",\n      type: payload.type,\n      original_payload: payload\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1280,
+        6120
+      ],
+      "id": "3ed22f7d-e2da-48d5-b0d8-1deb7f319232",
+      "name": "Pre-process | Line"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $json.id }}",
+        "message": "={{ $json.reply_text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -620,
+        5620
+      ],
+      "id": "d7eb3d74-6ca5-4267-93fd-3db1a4e9028c",
+      "name": "Gmailで編集した内容を送信",
+      "webhookId": "5b295988-1257-44e0-949b-1ddf2af444a9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ugTNKvkFQc5HKryR",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "67972fcb-ff6c-4ae0-be0c-ab6541a2ba0d",
+                    "leftValue": "={{ $json.action_id === \"approve_line\" }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1cbd80ad-12d7-46dc-be68-b82fdbb41473",
+                    "leftValue": "={{ $json.action_id === \"edit_line\" }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f8e3762c-7542-4a69-80fb-d6e8b7e0f187",
+                    "leftValue": "={{ $json.action_id === \"reject_line\" }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b4acdd0d-ff76-4fb1-8c4c-29f15187ef3a",
+                    "leftValue": "={{ $json.action_id === \"modal_submission\" }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1060,
+        6099
+      ],
+      "id": "2c799541-3d84-4b8f-9800-6b624724b3b7",
+      "name": "承認or編集or却下 | Line"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "67972fcb-ff6c-4ae0-be0c-ab6541a2ba0d",
+                    "leftValue": "={{ $json.action_id === \"approve_email\" }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1cbd80ad-12d7-46dc-be68-b82fdbb41473",
+                    "leftValue": "={{ $json.action_id === \"edit_email\" }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f8e3762c-7542-4a69-80fb-d6e8b7e0f187",
+                    "leftValue": "={{ $json.action_id === \"reject_email\" }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b4acdd0d-ff76-4fb1-8c4c-29f15187ef3a",
+                    "leftValue": "={{ $json.action_id === \"modal_submission\" }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1060,
+        5299
+      ],
+      "id": "0c7ff30e-7107-4045-8386-b9dce95694a5",
+      "name": "承認or編集or却下 | メール"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $node[\"Pre-process | Line\"].json.channel_id }}",
+          "mode": "id"
+        },
+        "ts": "={{ $node[\"Pre-process | Line\"].json.original_payload.message.ts }}",
+        "messageType": "block",
+        "blocksUi": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"✅ Line送信完了\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"送信先:\\n{{ $node[\"Pre-process | Line\"].json.sender }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"件名:\\nRe: {{ $node[\"Pre-process | Line\"].json.subject }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"承認者:\\n<@{{ $node[\"Pre-process | Line\"].json.user_id }}>\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"処理時刻:\\n{{ new Date().toLocaleString('ja-JP', {\n  timeZone: 'Asia/Tokyo',\n  year: 'numeric',\n  month: '2-digit',\n  day: '2-digit',\n  hour: '2-digit',\n  minute: '2-digit'\n}) }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"✅ *メールが正常に送信されました。*\"\n      }\n    }\n  ]\n}",
+        "updateFields": {},
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -620,
+        5820
+      ],
+      "id": "6a65deb5-1d95-47c2-b238-722e73f7d311",
+      "name": "送信済みの通知 | Line",
+      "webhookId": "545d9493-5606-426f-bc96-e4b796ba7e9e",
+      "credentials": {
+        "slackApi": {
+          "id": "Y6uNQ7oR37FzygW2",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"to\": \"{{ $json.line_data.user_id }}\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"{{ $json.line_data.message_text }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -840,
+        5820
+      ],
+      "id": "c8b5225e-bc7d-459d-b465-b7c7f5203f39",
+      "name": "Line返信",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "7Bw1GrUuzBZxJGxX",
+          "name": "Line Message API"
+        },
+        "httpBearerAuth": {
+          "id": "a6OZsJet3LtWKiX7",
+          "name": "Line Message API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $json.channel_id }}",
+          "mode": "id"
+        },
+        "ts": "={{ $json.original_payload.message.ts }}",
+        "messageType": "block",
+        "blocksUi": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"❌ Line返信却下\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"送信者:\\n{{ $json.sender }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"件名:\\n{{ $json.subject }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"却下者:\\n<@{{ $json.user_id }}>\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"却下時刻:\\n{{ new Date().toLocaleString('ja-JP', {\n  timeZone: 'Asia/Tokyo',\n  year: 'numeric',\n  month: '2-digit',\n  day: '2-digit',\n  hour: '2-digit',\n  minute: '2-digit'\n}) }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"_この返信は却下されました。必要に応じて手動で対応してください。_\"\n      }\n    }\n  ]\n}",
+        "updateFields": {},
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -840,
+        6220
+      ],
+      "id": "ddc6ac9d-5722-4413-9a8b-6696dad14a36",
+      "name": "却下通知 | Line",
+      "webhookId": "b780bc3d-b25d-41d7-8319-45bc1516b91c",
+      "credentials": {
+        "slackApi": {
+          "id": "Y6uNQ7oR37FzygW2",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $node[\"Pre-process | Line\"].json.channel_id }}",
+          "mode": "id"
+        },
+        "ts": "={{ $node[\"Pre-process | Line\"].json.message_ts }}",
+        "messageType": "block",
+        "blocksUi": "={\n  \"blocks\": [\n    {\n      \"type\": \"header\",\n      \"text\": {\n        \"type\": \"plain_text\",\n        \"text\": \"✅ Line送信完了\",\n        \"emoji\": true\n      }\n    },\n    {\n      \"type\": \"section\",\n      \"fields\": [\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"送信先:\\n{{ $node[\"Pre-process | Line\"].json.sender }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"件名:\\nRe: {{ $node[\"Pre-process | Line\"].json.subject }}\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"承認者:\\n<@{{ $node[\"Pre-process | Line\"].json.user_id }}>\"\n        },\n        {\n          \"type\": \"mrkdwn\",\n          \"text\": \"処理時刻:\\n{{ new Date().toLocaleString('ja-JP', {\n  timeZone: 'Asia/Tokyo',\n  year: 'numeric',\n  month: '2-digit',\n  day: '2-digit',\n  hour: '2-digit',\n  minute: '2-digit'\n}) }}\"\n        }\n      ]\n    },\n    {\n      \"type\": \"section\",\n      \"text\": {\n        \"type\": \"mrkdwn\",\n        \"text\": \"✅ *メールが正常に送信されました。*\"\n      }\n    }\n  ]\n}",
+        "updateFields": {},
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -400,
+        6420
+      ],
+      "id": "4b5a783a-a185-4a62-afa8-e4e6d26b3dca",
+      "name": "編集した内容で送信したことを通知 | Line",
+      "webhookId": "545d9493-5606-426f-bc96-e4b796ba7e9e",
+      "credentials": {
+        "slackApi": {
+          "id": "Y6uNQ7oR37FzygW2",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const trigger_id = $input.all()[0].json.trigger_id;\nconst email_id = $input.all()[0].json.button_value;\nconst channel_id = $input.all()[0].json.channel_id;\nconst message_ts = $input.all()[0].json.original_payload.container.message_ts;\nconst notification_type = $input.all()[0].json.notification_type;\nconst token = $env.SLACK_BOT_TOKEN;\n\nconst view = {\n  type: \"modal\",\n  callback_id: \"edit_email_modal\",\n  private_metadata: JSON.stringify({\n    email_id: email_id,\n    channel_id: channel_id,\n    message_ts: message_ts,\n    notification_type: notification_type // ここに新しい変数を追加\n  }),\n  title: {\n    type: \"plain_text\",\n    text: \"メール内容編集\"\n  },\n  submit: {\n    type: \"plain_text\",\n    text: \"保存\"\n  },\n  close: {\n    type: \"plain_text\",\n    text: \"キャンセル\"\n  },\n  blocks: [\n    {\n      type: \"input\",\n      block_id: \"email_content_block\",\n      label: {\n        type: \"plain_text\",\n        text: \"メール内容\"\n      },\n      element: {\n        type: \"plain_text_input\",\n        action_id: \"email_content_input\",\n        multiline: true,\n        initial_value: $input.all()[0].json.reply_text,\n        placeholder: {\n          type: \"plain_text\",\n          text: \"メールの内容を入力してください\"\n        }\n      }\n    }\n  ]\n};\n\nconst response = await this.helpers.httpRequest({\n  method: 'POST',\n  url: 'https://slack.com/api/views.open',\n  headers: {\n    'Authorization': `Bearer ${token}`,\n    'Content-Type': 'application/json; charset=utf-8'\n  },\n  body: {\n    trigger_id: trigger_id,\n    view: view\n  }\n});\n\nreturn [{ json: response }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -840,
+        6020
+      ],
+      "id": "1e634852-d408-4299-b6bb-2ea1f5fc4f07",
+      "name": "編集するBlockの送信 | Line"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputData = $('Slack-Button-Handler').all()[0].json;\n\n// payload が文字列の場合はパース、オブジェクトの場合はそのまま使用\nlet payload;\nif (typeof inputData.body.payload === 'string') {\n  payload = JSON.parse(inputData.body.payload);\n} else {\n  payload = inputData.body.payload;\n}\n\nlet notificationType = null;\n\n// Line関連のaction_idを定義\nconst LINE_ACTION_IDS = [\n  // Line専用ボタン\n  'approve_line', 'edit_line', 'reject_line',\n  // Line専用ドロップダウン（添付ドキュメントより）\n  'request_type', 'demo_design_progress_z', 'demo_site_progress_aa', \n  'mobile_optimization', 'assign_user', 'notify_channel'\n];\n\n// Email関連のaction_idを定義\nconst EMAIL_ACTION_IDS = [\n  'approve_email', 'edit_email', 'reject_email'\n];\n\n// ボタンのvalueからtypeを取得する関数（二重エンコード対応）\nfunction parseButtonValue(value) {\n  try {\n    // 一回目のJSON.parse\n    const firstParse = JSON.parse(value);\n    \n    // オブジェクトでtypeプロパティがある場合（一重エンコード）\n    if (typeof firstParse === 'object' && firstParse.type) {\n      return firstParse.type;\n    }\n    \n    // 文字列の場合、二回目のJSON.parseを試行（二重エンコード）\n    if (typeof firstParse === 'string') {\n      const secondParse = JSON.parse(firstParse);\n      if (typeof secondParse === 'object' && secondParse.type) {\n        return secondParse.type;\n      }\n    }\n    \n    // どちらでもない場合はnull（後の判定に委ねる）\n    return null;\n  } catch {\n    // JSON.parseに失敗した場合はnull\n    return null;\n  }\n}\n\n// メイン判定ロジック\nif (payload.type === 'view_submission') {\n  // モーダル提出時の処理\n  const privateMetadata = JSON.parse(payload.view.private_metadata);\n  notificationType = privateMetadata.notification_type;\n  \n} else if (payload.type === 'block_actions') {\n  // ブロックアクション時の処理\n  \n  for (const action of payload.actions) {\n    const actionId = action.action_id;\n    \n    // 1. action_idベースの判定（最優先）\n    if (LINE_ACTION_IDS.includes(actionId)) {\n      notificationType = 'line';\n      break;\n    } else if (EMAIL_ACTION_IDS.includes(actionId)) {\n      notificationType = 'email';\n      break;\n    }\n    \n    // 2. ボタンのvalue内容で判定（フォールバック）\n    if (action.value) {\n      const valueType = parseButtonValue(action.value);\n      if (valueType) {\n        notificationType = valueType;\n        break;\n      }\n    }\n  }\n  \n  // 3. 最終フォールバック：action_idの命名規則で判定\n  if (!notificationType) {\n    for (const action of payload.actions) {\n      const actionId = action.action_id;\n      \n      // line系のkeywordを含む場合\n      if (actionId.includes('line') || actionId.includes('demo_')) {\n        notificationType = 'line';\n        break;\n      }\n      // email系のkeywordを含む場合  \n      if (actionId.includes('email') || actionId.includes('mail')) {\n        notificationType = 'email';\n        break;\n      }\n    }\n  }\n}\n\n// デバッグログ出力（本番では削除推奨）\nconsole.log('判定結果:', {\n  payloadType: payload.type,\n  actionIds: payload.actions?.map(a => a.action_id) || [],\n  notificationType: notificationType\n});\n\n// デフォルト値設定（判定できない場合）\nif (!notificationType) {\n  console.log('警告: 通知タイプを判定できませんでした。デフォルトでemailに設定します。');\n  notificationType = 'email';\n}\n\n// 既存のすべてのデータに新しいプロパティを追加して返します\ninputData.notificationType = notificationType;\n\nreturn [{ json: inputData }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1720,
+        5720
+      ],
+      "id": "0b5a3997-f165-4bd9-a122-15e0c1e335ad",
+      "name": "承認または却下 or 編集を判別"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"to\": \"{{ $json.user_id }}\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"{{ $json.message_text }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -620,
+        6420
+      ],
+      "id": "734b215f-f918-4bc2-aa48-f52825fa27f4",
+      "name": "修正したLine返信",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "7Bw1GrUuzBZxJGxX",
+          "name": "Line Message API"
+        },
+        "httpBearerAuth": {
+          "id": "a6OZsJet3LtWKiX7",
+          "name": "Line Message API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $input.all()[0].json;\n\n// view_submissionの場合の処理\nif (payload.type === 'view_submission') {  \n  return [{\n    json: {\n      id: payload.id,           // {{ $json.id }} に対応\n      message_text: payload.edited_content,  // {{ $json.reply_text }} に対応\n      user_id: JSON.parse(payload.id).userId,\n      channel_id: payload.channel_id,\n      message_ts: payload.message_ts,\n      timestamp: new Date().toISOString()\n    }\n  }];\n}\n\n// view_submissionでない場合は空を返す\nreturn [{ json: {} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -840,
+        6420
+      ],
+      "id": "d6b46312-a86a-434f-962b-a969824a0732",
+      "name": "編集済みメールの前処理 | Line"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputData = $input.all()[0].json;\n\n// payload が文字列の場合はパース、オブジェクトの場合はそのまま使用\nlet payload;\nif (typeof inputData.body.payload === 'string') {\n  payload = JSON.parse(inputData.body.payload);\n} else {\n  payload = inputData.body.payload;\n}\n\nlet requestType = null;\nlet notifyChannel = null;\nlet notifyUser = null;\n\nif (payload.type === 'block_actions') {\n  // アクション内容を解析\n  for (const action of payload.actions) {\n    if (action.action_id === 'request_type') {\n      // 依頼種別ドロップダウンの場合\n      requestType = action.selected_option.value;\n    } else if (action.action_id === 'notify_channel') {\n      // チャンネル選択ドロップダウンの場合\n      notifyChannel = action.selected_channel;\n    } else if (action.action_id === 'notify_user') {\n      // ユーザー選択ドロップダウンの場合\n      notifyUser = action.selected_user;\n    }\n  }\n}\n\n// 既存のすべてのデータに新しいプロパティを追加して返します\ninputData.requestType = requestType;\ninputData.notifyChannel = notifyChannel;\ninputData.notifyUser = notifyUser;\n\nreturn [{ json: inputData }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2160,
+        5720
+      ],
+      "id": "7a0aea17-77ce-4179-b9ad-ad4c4e086375",
+      "name": "依頼種別ドロップダウンの判別"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "30b35452-4478-44ea-9ec3-38d1c0d54da9",
+                    "leftValue": "={{ $json.requestType }}",
+                    "rightValue": "site_modification",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f86a364d-c1e5-4433-b0f4-2457acada64b",
+                    "leftValue": "={{ $json.requestType }}",
+                    "rightValue": "business_request",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "aa72e565-24cb-4fb8-bd1d-9558dd4de817",
+                    "leftValue": "={{ $json.requestType }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "dateTime",
+                      "operation": "empty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1940,
+        5720
+      ],
+      "id": "4b5eae25-37a6-4d96-a345-bd6d1fb48be3",
+      "name": "依頼の分類"
+    },
+    {
+      "parameters": {
+        "description": "このデータは、顧客から寄せられる様々なお問い合わせに、正確かつ迅速に回答するために作成された公式ナレッジベースです。AIがこの情報を参照し、お問い合わせに対する回答案を生成することを目的としています。\n\n主な内容:\n- 製品・サービスに関する詳細情報\n- 利用料金や契約に関する規定\n- 操作方法やトラブルシューティングの手順\n- よくあるご質問とその回答（FAQ）\n- 社内ポリシーや対応方針",
+        "topK": 8
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
+      "typeVersion": 1.1,
+      "position": [
+        -1820,
+        4682.5
+      ],
+      "id": "12016280-ac66-495a-81ee-5695f95b4e9e",
+      "name": "Answer questions with a vector store"
+    },
+    {
+      "parameters": {
+        "modelName": "models/embedding-001"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1836,
+        5080
+      ],
+      "id": "4898663e-a45a-4b5c-bdf2-e6ef3f91df69",
+      "name": "Embeddings Google Gemini1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "F9ZNcBqBmV5OG1jP",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1628,
+        4880
+      ],
+      "id": "1e0a8cd4-3f8d-4fe0-a308-d15636a67ee4",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "F9ZNcBqBmV5OG1jP",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "topK": 8
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
+      "typeVersion": 1.1,
+      "position": [
+        -940,
+        3822.5
+      ],
+      "id": "da3c0724-c674-43de-83d4-3c1684862c53",
+      "name": "Answer questions with a vector store1"
+    },
+    {
+      "parameters": {
+        "modelName": "models/embedding-001"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -956,
+        4220
+      ],
+      "id": "4ae46944-bae0-4912-8bd1-65eb0c58f41e",
+      "name": "Embeddings Google Gemini3",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "F9ZNcBqBmV5OG1jP",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -748,
+        4020
+      ],
+      "id": "2582e72d-b124-4cff-ab6c-13926bdff9bd",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "F9ZNcBqBmV5OG1jP",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {
+          "queryName": "hybrid_search_documents"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.2,
+      "position": [
+        -1924,
+        4882.5
+      ],
+      "id": "9b5507b5-4a4b-457c-89a1-71af305aef2c",
+      "name": "PDF参照｜Line",
+      "credentials": {
+        "supabaseApi": {
+          "id": "wfwaSwY29sG7eaO8",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.2,
+      "position": [
+        -1044,
+        4022.5
+      ],
+      "id": "13d6a6fc-8302-46be-bf4a-efef5e7f969d",
+      "name": "PDF参照｜Email",
+      "credentials": {
+        "supabaseApi": {
+          "id": "wfwaSwY29sG7eaO8",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "RAG｜メール対応",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG｜メール対応": {
+      "main": [
+        [
+          {
+            "node": "LLMの出力を修正",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader1": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader1",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store": {
+      "main": [
+        [
+          {
+            "node": "RAGで使用する資料のアップデート完了！",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack-Button-Handler": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "データ前処理",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmailで送信": {
+      "main": [
+        [
+          {
+            "node": "送信済みの通知",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "編集済みメールの前処理": {
+      "main": [
+        [
+          {
+            "node": "Gmailで編集した内容を送信",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ブロックするメールアドレスを取得": {
+      "main": [
+        [
+          {
+            "node": "ブロックするメールかどうかを判定",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ブロックするメールかどうかを判定": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "データ前処理": {
+      "main": [
+        [
+          {
+            "node": "メールアドレスから顧客名を取得",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "RAG｜メール対応",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "依頼種別ドロップダウンの判別",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "メールアドレスから顧客名を取得": {
+      "main": [
+        [
+          {
+            "node": "パートナー名を取得",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "パートナー名を取得": {
+      "main": [
+        [
+          {
+            "node": "ブロックするメールアドレスを取得",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LineIDから顧客名を取得": {
+      "main": [
+        [
+          {
+            "node": "LineIDからパートナー名を取得",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Line Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "LineIDから顧客名を取得",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "RAG｜Line対応",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LineIDからパートナー名を取得": {
+      "main": [
+        [
+          {
+            "node": "RAG｜Line対応",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG｜Line対応": {
+      "main": [
+        [
+          {
+            "node": "LLMの出力を修正 | Line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLMの出力を修正": {
+      "main": [
+        [
+          {
+            "node": "通知",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLMの出力を修正 | Line": {
+      "main": [
+        [
+          {
+            "node": "通知 | Line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "メールとLineの分類": {
+      "main": [
+        [
+          {
+            "node": "Pre-process | メール",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pre-process | Line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pre-process | メール": {
+      "main": [
+        [
+          {
+            "node": "承認or編集or却下 | メール",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmailで編集した内容を送信": {
+      "main": [
+        [
+          {
+            "node": "編集した内容で送信したことを通知",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pre-process | Line": {
+      "main": [
+        [
+          {
+            "node": "承認or編集or却下 | Line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "承認or編集or却下 | Line": {
+      "main": [
+        [
+          {
+            "node": "Line返信",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "編集するBlockの送信 | Line",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "却下通知 | Line",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "編集済みメールの前処理 | Line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "承認or編集or却下 | メール": {
+      "main": [
+        [
+          {
+            "node": "Gmailで送信",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "編集するBlockの送信",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "却下通知",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "編集済みメールの前処理",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Line返信": {
+      "main": [
+        [
+          {
+            "node": "送信済みの通知 | Line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "承認または却下 or 編集を判別": {
+      "main": [
+        [
+          {
+            "node": "メールとLineの分類",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "修正したLine返信": {
+      "main": [
+        [
+          {
+            "node": "編集した内容で送信したことを通知 | Line",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "編集済みメールの前処理 | Line": {
+      "main": [
+        [
+          {
+            "node": "修正したLine返信",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "依頼種別ドロップダウンの判別": {
+      "main": [
+        [
+          {
+            "node": "依頼の分類",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "依頼の分類": {
+      "main": [
+        [],
+        [],
+        [
+          {
+            "node": "承認または却下 or 編集を判別",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer questions with a vector store": {
+      "ai_tool": [
+        [
+          {
+            "node": "RAG｜Line対応",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "PDF参照｜Line",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Answer questions with a vector store",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini3": {
+      "ai_embedding": [
+        [
+          {
+            "node": "PDF参照｜Email",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Answer questions with a vector store1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer questions with a vector store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "RAG｜メール対応",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF参照｜Line": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Answer questions with a vector store",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDF参照｜Email": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Answer questions with a vector store1",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "cfcb0fe3-05d5-4d25-89ac-bc04accf62cb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a17405cf09e39ddc1a91d2d5324a5112905aaf8308696f1df377b8f4d0c3e670"
+  },
+  "id": "3x4bJ2gkUNFImvo9",
+  "tags": []
+}

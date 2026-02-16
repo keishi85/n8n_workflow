@@ -1,0 +1,656 @@
+{
+    "name": "Auto Content Pipeline - RSS + Search -> GPT-4 -> Sheets + Slack",
+    "nodes": [
+      {
+        "id": "1",
+        "name": "Schedule Trigger (7:00 JST)",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [250, 100],
+        "parameters": {
+          "triggerTimes": {
+            "item": [
+              {
+                "cronExpression": "0 7 * * *",
+                "timeZone": "Asia/Tokyo"
+              }
+            ]
+          }
+        },
+        "notes": "毎朝7:00（JST）に起動。処理頻度はここで変更可能。"
+      },
+  
+      {
+        "id": "2",
+        "name": "Google Sheets - Read RSS Sources (シート1)",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 1,
+        "position": [500, 50],
+        "credentials": {
+          "googleSheetsOAuth2": {
+            "id": "={{$env.GOOGLE_SHEETS_CREDENTIAL_ID}}",
+            "name": "Google Sheets OAuth2"
+          }
+        },
+        "parameters": {
+          "operation": "getRange",
+          "sheetId": "={{$env.SHEET_ID}}",
+          "range": "A:F",
+          "sheetName": "RSS情報源管理",
+          "options": {}
+        },
+        "notes": "A:カテゴリ B:情報源名 C:RSS URL D:有効/無効 E:優先度 F:備考 を読み込む"
+      },
+  
+      {
+        "id": "3",
+        "name": "Split RSS Sources (Loop)",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 1,
+        "position": [750, 50],
+        "parameters": {
+          "batchSize": 1
+        },
+        "notes": "RSSソースを1件ずつ処理（レート制限の都合）"
+      },
+  
+      {
+        "id": "4",
+        "name": "RSS Read (dynamic URL)",
+        "type": "n8n-nodes-base.rssFeedRead",
+        "typeVersion": 1,
+        "position": [1000, 50],
+        "parameters": {
+          "url": "={{$json[\"C\"]}}",
+          "options": {}
+        },
+        "notes": "スプレッドシートのC列(RSS URL)を動的に指定。"
+      },
+  
+      {
+        "id": "5",
+        "name": "Function - Filter 24h & Normalize",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [1250, 50],
+        "parameters": {
+          "functionCode": "// 24時間以内のRSS記事のみ抽出し、正規化する\nconst oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);\nconst sourceRow = $item(0).$node['Split RSS Sources (Loop)']?.json || {};\nconst allInputs = $input.all();\nconst filteredItems = [];\n\n// RSS Feed Readの出力を処理\nfor (const inputItem of allInputs) {\n  const rssData = inputItem.json;\n  \n  // RSS記事の配列を取得（複数の可能性のあるフィールド名に対応）\n  const articles = rssData.items || rssData.entries || (Array.isArray(rssData) ? rssData : [rssData]);\n  \n  if (articles && Array.isArray(articles)) {\n    for (const article of articles) {\n      // 日付パース（複数の可能性のある日付フィールドに対応）\n      const dateStr = article.pubDate || article.isoDate || article.published || article.date;\n      if (!dateStr) continue;\n      \n      const pubDate = new Date(dateStr);\n      if (isNaN(pubDate.getTime())) continue; // 無効な日付をスキップ\n      \n      // 24時間以内の記事のみ処理\n      if (pubDate > oneDayAgo) {\n        filteredItems.push({\n          title: article.title || 'タイトル不明',\n          link: article.link || article.url || '',\n          pubDate: pubDate.toISOString(),\n          summary: article.contentSnippet || article.summary || article.content || '',\n          sourceRow: sourceRow,\n          rssSource: sourceRow.B || '不明なソース',\n          category: sourceRow.A || 'その他'\n        });\n      }\n    }\n  }\n}\n\nconsole.log(`RSS処理完了: ${filteredItems.length}件の24時間以内記事を抽出`);\nreturn filteredItems.map(item => ({ json: item }));"
+        },
+        "notes": "24時間フィルタ。RSSの出力形式によって functionCode を調整してね（コメントあり）"
+      },
+  
+      {
+        "id": "6",
+        "name": "Google Sheets - Read Keywords (シート2)",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 1,
+        "position": [500, 250],
+        "credentials": {
+          "googleSheetsOAuth2": {
+            "id": "={{$env.GOOGLE_SHEETS_CREDENTIAL_ID}}",
+            "name": "Google Sheets OAuth2"
+          }
+        },
+        "parameters": {
+          "operation": "getRange",
+          "sheetId": "={{$env.SHEET_ID}}",
+          "range": "A:G",
+          "sheetName": "検索キーワード管理",
+          "options": {}
+        },
+        "notes": "A:カテゴリ B:キーワード C:検索エンジン D:有効/無効 E:言語 F:頻度 G:備考 を読み込む"
+      },
+  
+      {
+        "id": "7",
+        "name": "Split Keywords (Loop)",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 1,
+        "position": [750, 250],
+        "parameters": {
+          "batchSize": 1
+        },
+        "notes": "キーワードを1つずつ処理。検索頻度に従い間引き可能。"
+      },
+  
+      {
+        "id": "8",
+        "name": "HTTP Request - Google News/Search API",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 1,
+        "position": [1000, 250],
+        "credentials": {},
+        "parameters": {
+          "requestMethod": "GET",
+          "url": "={{ $json['C'] === 'google-news' ? `https://newsapi.org/v2/everything?q=${encodeURIComponent($json['B'])}&language=${$json['E']||'en'}&pageSize=10&apiKey=${$env.NEWSAPI_KEY}` : `https://www.googleapis.com/customsearch/v1?key=${$env.GOOGLE_CUSTOM_SEARCH_KEY}&cx=${$env.GOOGLE_CSE_ID}&q=${encodeURIComponent($json['B'])}` }}",
+          "responseFormat": "json",
+          "options": {
+            "retryOnFail": true,
+            "numberOfRetries": 3,
+            "retryInterval": 2000
+          }
+        },
+        "notes": "検索エンジン列に応じて NewsAPI または Google Custom Search を呼ぶ。APIキーは環境変数管理。"
+      },
+  
+      {
+        "id": "9",
+        "name": "Function - Normalize Search Results",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [1250, 250],
+        "parameters": {
+          "functionCode": "// 検索結果をRSSと同じフォーマットに整形して返す\nconst out = [];\nconst body = $input.item.json;\nif (body.articles) {\n  for (const a of body.articles) {\n    out.push({ title: a.title, link: a.url || a.link, pubDate: a.publishedAt || a.pubDate, summary: a.description || a.content });\n  }\n} else if (body.items) {\n  for (const a of body.items) {\n    out.push({ title: a.title, link: a.link, pubDate: a.pagemap && a.pagemap.metatags ? a.pagemap.metatags[0]['article:published_time'] : null, summary: a.snippet || '' });\n  }\n}\nreturn out.map(i => ({ json: i }));"
+        },
+        "notes": "NewsAPI / Google Custom Search のレスポンスを共通フォーマットに。"
+      },
+
+      {
+        "id": "22",
+        "name": "Google Sheets - Read Prompts (シート3)",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 1,
+        "position": [500, 350],
+        "credentials": {
+          "googleSheetsOAuth2": {
+            "id": "={{$env.GOOGLE_SHEETS_CREDENTIAL_ID}}",
+            "name": "Google Sheets OAuth2"
+          }
+        },
+        "parameters": {
+          "operation": "getRange",
+          "sheetId": "={{$env.SHEET_ID}}",
+          "range": "A:G",
+          "sheetName": "AIプロンプト設定",
+          "options": {}
+        },
+        "notes": "A:プロンプトID B:カテゴリ C:プロンプト種別 D:プロンプト内容 E:有効/無効 F:バージョン G:備考 を読み込む"
+      },
+
+      {
+        "id": "23",
+        "name": "Function - Process Prompt Settings",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [750, 350],
+        "parameters": {
+          "functionCode": "// プロンプト設定をカテゴリ別に整理し、有効なプロンプトのみ抽出\nconst prompts = {};\nconst items = $input.all();\n\nfor (const item of items) {\n  const row = item.json;\n  // ヘッダー行をスキップ\n  if (row.A === 'プロンプトID' || !row.A) continue;\n  \n  // 有効なプロンプトのみ処理\n  if (row.E === '有効' || row.E === 'TRUE') {\n    const category = row.B || 'default';\n    const promptType = row.C || 'filter';\n    \n    if (!prompts[category]) {\n      prompts[category] = {};\n    }\n    \n    prompts[category][promptType] = {\n      id: row.A,\n      content: row.D || '',\n      version: row.F || '1.0',\n      notes: row.G || ''\n    };\n  }\n}\n\n// 全カテゴリのプロンプト設定を1つのオブジェクトとして返す\nreturn [{ json: { promptSettings: prompts } }];"
+        },
+        "notes": "シート3のプロンプト設定をカテゴリ別に整理。フィルタ・生成・画像プロンプト用に分類。"
+      },
+  
+      {
+        "id": "10",
+        "name": "Function - Merge & Dedupe",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [1500, 150],
+        "parameters": {
+          "functionCode": "// RSS結果と検索結果を統合し、URL基準で重複排除\nconst allItems = $input.all();\nconst articles = [];\n\n// 各入力からデータを抽出\nfor (const item of allItems) {\n  if (item.json) {\n    if (Array.isArray(item.json)) {\n      // 配列の場合は展開\n      articles.push(...item.json);\n    } else if (item.json.title && item.json.link) {\n      // 記事オブジェクトの場合は直接追加\n      articles.push(item.json);\n    }\n  }\n}\n\n// URL基準で重複排除（nullやundefinedのlinkは除外）\nconst validArticles = articles.filter(a => a.link && a.link.trim());\nconst uniqueArticles = validArticles.filter((article, index, self) => \n  index === self.findIndex(a => a.link === article.link)\n);\n\n// カテゴリ別に自動分類\nconst categorized = {\n  'AI最新情報': [],\n  'AI活用事例': [],\n  'N8N事例': []\n};\n\nfor (const article of uniqueArticles) {\n  const title = (article.title || '').toLowerCase();\n  const summary = (article.summary || '').toLowerCase();\n  const content = title + ' ' + summary;\n  \n  // カテゴリ分類ロジック\n  if (/ai|openai|gpt|claude|llm|機械学習|深層学習|neural/i.test(content)) {\n    if (/導入|事例|活用|roi|成功|効果|実践|事例研究/i.test(content)) {\n      categorized['AI活用事例'].push(article);\n    } else {\n      categorized['AI最新情報'].push(article);\n    }\n  } else if (/n8n|ワークフロー|自動化|automation|workflow/i.test(content)) {\n    categorized['N8N事例'].push(article);\n  } else {\n    // デフォルトはAI最新情報\n    categorized['AI最新情報'].push(article);\n  }\n}\n\n// カテゴリタグ付きで出力配列を構築\nconst output = [];\nfor (const [category, articles] of Object.entries(categorized)) {\n  for (const article of articles) {\n    output.push({\n      category: category,\n      title: article.title || '',\n      link: article.link || '',\n      pubDate: article.pubDate || new Date().toISOString(),\n      summary: article.summary || '',\n      sourceCategory: article.sourceRow?.A || '',\n      originalData: article\n    });\n  }\n}\n\nconsole.log(`統合完了: ${uniqueArticles.length}記事を処理, ${output.length}記事を出力`);\nreturn output.map(item => ({ json: item }));"
+        },
+        "notes": "重複除去（URLベース）とカテゴリ割当の基礎ロジック。キーワードやソースの重み付けはここで拡張可能。"
+      },
+  
+      {
+        "id": "11",
+        "name": "Split In Batches - By Category",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 1,
+        "position": [1750, 150],
+        "parameters": {
+          "batchSize": 1
+        },
+        "notes": "カテゴリ毎に記事を流して GPT フィルタ → 生成へ"
+      },
+  
+      {
+        "id": "12",
+        "name": "OpenAI - Filter (gpt-4)",
+        "type": "n8n-nodes-base.openAI",
+        "typeVersion": 1,
+        "position": [2000, 100],
+        "credentials": {
+          "openAIApi": {
+            "id": "={{$env.OPENAI_CRED_ID}}",
+            "name": "OpenAI"
+          }
+        },
+        "parameters": {
+          "operation": "chatCompletion",
+          "model": "gpt-4",
+          "messages": [
+            {
+              "role": "system",
+              "content": "あなたはSNS投稿用の編集者です。低トークンで要点だけを抽出し、スパムや信頼性の低い情報は除外してください。"
+            },
+            {
+              "role": "user",
+              "content": "以下の記事を評価して、SNS投稿に値するか（yes/no）と短い理由（日本語で20文字以内）を返して下さい。記事情報:\nTitle: {{$json[\"title\"]}}\nURL: {{$json[\"link\"]}}\nSummary: {{$json[\"summary\"]}}\nCategory: {{$json[\"category\"]}}\n\n出力フォーマット（JSONのみ）:\n{\"keep\": \"yes|no\", \"reason\": \"...\"}"
+            }
+          ],
+          "temperature": 0.0,
+          "max_tokens": 120,
+          "top_p": 1
+        },
+        "notes": "フィルタリングは低温度で。コスト削減のため max_tokens を控えめに。"
+      },
+  
+      {
+        "id": "13",
+        "name": "Function - Parse Filter Result",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [2250, 100],
+        "parameters": {
+          "functionCode": "// OpenAIフィルタリング結果を解析し、通過した記事のデータを次のノードに渡す\nconst filterResponse = $input.item.json;\nlet keep = false;\nlet reason = '';\n\n// OpenAIフィルタリング結果を解析\nif (filterResponse && filterResponse.choices && filterResponse.choices[0]) {\n  try {\n    const responseText = filterResponse.choices[0].message.content.trim();\n    const parsed = JSON.parse(responseText);\n    keep = parsed.keep === 'yes' || parsed.keep === true;\n    reason = parsed.reason || 'AI判定通過';\n  } catch (e) {\n    console.log('フィルタ結果パースエラー:', e.message);\n    console.log('レスポンステキスト:', filterResponse.choices[0].message.content);\n    // パースエラーの場合は安全のため除外\n    keep = false;\n    reason = 'JSON解析エラー';\n  }\n}\n\n// フィルタリングで除外された記事は処理終了\nif (!keep) {\n  console.log(`記事が除外されました: ${reason}`);\n  return [];\n}\n\n// 元記事データを取得（Split In Batches から）\nconst batchNode = $node['Split In Batches - By Category'];\nlet articleData = {};\n\nif (batchNode && batchNode.json) {\n  articleData = batchNode.json;\n} else {\n  // フォールバック: 現在の実行コンテキストから取得を試行\n  const currentExecution = $execution;\n  if (currentExecution && currentExecution.data && currentExecution.data.main) {\n    const batchData = currentExecution.data.main[0];\n    if (batchData && batchData.length > 0) {\n      articleData = batchData[0].json;\n    }\n  }\n}\n\n// 記事データにフィルタ結果を追加\nconst enrichedArticleData = {\n  ...articleData,\n  filter_reason: reason,\n  filter_passed: true,\n  filter_timestamp: new Date().toISOString()\n};\n\nconsole.log(`フィルタ通過: ${enrichedArticleData.title || '不明な記事'}`);\nconsole.log(`理由: ${reason}`);\n\nreturn [{ json: enrichedArticleData }];"
+        },
+        "notes": "OpenAI の出力に依存する箇所。エラー時は除外する安全設計。"
+      },
+  
+      {
+        "id": "14",
+        "name": "OpenAI - Generate Post Text (gpt-4)",
+        "type": "n8n-nodes-base.openAI",
+        "typeVersion": 1,
+        "position": [2500, 100],
+        "credentials": {
+          "openAIApi": {
+            "id": "={{$env.OPENAI_CRED_ID}}",
+            "name": "OpenAI"
+          }
+        },
+        "parameters": {
+          "operation": "chatCompletion",
+          "model": "gpt-4",
+          "messages": [
+            {
+              "role": "system",
+              "content": "あなたはSNS向けの短くてキャッチーな投稿文を作る編集者です。日本語または英語で出力してください。ハッシュタグ候補も3つ作って下さい。トーンはプロフェッショナルかつ親しみやすく。"
+            },
+            {
+              "role": "user",
+              "content": "記事情報:\nTitle: {{$json[\"title\"]}}\nURL: {{$json[\"link\"]}}\nSummary: {{$json[\"summary\"]}}\nCategory: {{$json[\"category\"]}}\n\n出力はJSONで以下の形式にしてください:\n{\"post\":\"投稿文（日本語または英語）\",\"hashtags\":[\"#tag1\",\"#tag2\",\"#tag3\"],\"language\":\"ja|en\"}\n\n文字数は投稿文で120文字以内にしてください。"
+            }
+          ],
+          "temperature": 0.6,
+          "max_tokens": 220
+        },
+        "notes": "投稿文生成。コストとのバランスで温度は0.6、トークン上限は控えめ。"
+      },
+  
+      {
+        "id": "15",
+        "name": "OpenAI - Generate Image Prompt",
+        "type": "n8n-nodes-base.openAI",
+        "typeVersion": 1,
+        "position": [2500, 250],
+        "credentials": {
+          "openAIApi": {
+            "id": "={{$env.OPENAI_CRED_ID}}",
+            "name": "OpenAI"
+          }
+        },
+        "parameters": {
+          "operation": "chatCompletion",
+          "model": "gpt-4",
+          "messages": [
+            {
+              "role": "system",
+              "content": "SNS用の推奨画像プロンプトを生成してください。画像生成サービス（Stable Diffusion / Dify 等）向けに最適化された短めのプロンプトを日本語または英語で出力してください。"
+            },
+            {
+              "role": "user",
+              "content": "記事タイトル: {{$json[\"title\"]}}\n記事要約: {{$json[\"summary\"]}}\nカテゴリ: {{$json[\"category\"]}}\n\n出力フォーマット（JSON）:\n{\"image_prompt\":\"...（英語推奨）\"}\n\n※画像は著作権・肖像権に注意するプロンプトにしてください。"
+            }
+          ],
+          "temperature": 0.7,
+          "max_tokens": 120
+        },
+        "notes": "将来的に Dify や別の画像生成APIへ渡すためのプロンプトを生成"
+      },
+  
+      {
+        "id": "16",
+        "name": "Function - Shape Final Row for Sheets",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [2800, 180],
+        "parameters": {
+          "functionCode": "// 全ての生成結果を統合してシート書き込み用データを作成（N8N v1.0+ 対応）\n// 画像プロンプト生成が最終ステップなので、ここで全てのデータを統合\n\nconst currentInput = $input.item.json; // 画像プロンプト生成結果\nlet imagePromptData = { image_prompt: '' };\nlet postData = { post: '', hashtags: [] };\nlet articleData = { category: 'AI最新情報', title: '', link: '', summary: '' };\n\n// 1. 現在の入力（画像プロンプト生成結果）を解析\nif (currentInput && currentInput.choices && currentInput.choices[0]) {\n  try {\n    const content = currentInput.choices[0].message.content.trim();\n    imagePromptData = JSON.parse(content);\n    console.log('✅ 画像プロンプト取得成功');\n  } catch (e) {\n    console.log('❌ 画像プロンプト解析エラー:', e.message);\n    imagePromptData = { image_prompt: '画像生成用プロンプトの解析に失敗しました' };\n  }\n}\n\n// 2. 実行履歴から過去のノード結果を検索\nconst execution = $execution;\nif (execution && execution.data && execution.data.main && execution.data.main[0]) {\n  const executionItems = execution.data.main[0];\n  console.log(`実行履歴から ${executionItems.length} 件のアイテムを検索中...`);\n  \n  // 投稿文生成結果を検索（OpenAI レスポンス形式で post フィールドがあるもの）\n  for (let i = executionItems.length - 1; i >= 0; i--) {\n    const item = executionItems[i];\n    if (item && item.json && item.json.choices && item.json.choices[0]) {\n      try {\n        const content = item.json.choices[0].message.content;\n        const parsed = JSON.parse(content);\n        if (parsed.post && !parsed.image_prompt) {\n          postData = parsed;\n          console.log('✅ 投稿文データ発見:', (parsed.post || '').slice(0, 30) + '...');\n          break;\n        }\n      } catch (e) {\n        // JSON解析失敗は正常（他のOpenAI呼び出しの可能性）\n      }\n    }\n  }\n  \n  // 記事データを検索（title, link, category フィールドがあるもの）\n  for (let i = executionItems.length - 1; i >= 0; i--) {\n    const item = executionItems[i];\n    if (item && item.json && item.json.title && item.json.link && item.json.category) {\n      articleData = item.json;\n      console.log('✅ 記事データ発見:', (articleData.title || '').slice(0, 30) + '...');\n      break;\n    }\n  }\n}\n\n// 3. デフォルト値の設定\nif (!postData.post) {\n  postData.post = '投稿文の生成に失敗しました。手動で作成してください。';\n  postData.hashtags = ['#AI', '#自動化'];\n}\n\nif (!articleData.title) {\n  articleData = {\n    category: 'AI最新情報',\n    title: 'タイトルの取得に失敗しました',\n    link: '',\n    summary: 'データ取得エラー'\n  };\n}\n\n// 4. シート4の行データを作成\nconst now = new Date();\nconst jstTime = new Date(now.getTime() + (9 * 60 * 60 * 1000)).toISOString().replace('T', ' ').slice(0, 19);\n\nconst row = [\n  jstTime, // A: 日付（JST形式）\n  articleData.category, // B: カテゴリ\n  (articleData.title || '').slice(0, 200), // C: 元記事タイトル（200文字制限）\n  articleData.link || '', // D: 元記事URL\n  (postData.post || '').slice(0, 400), // E: 生成された投稿文（400文字制限）\n  Array.isArray(postData.hashtags) ? postData.hashtags.join(' ') : (postData.hashtags || ''), // F: ハッシュタグ\n  imagePromptData.image_prompt || '', // G: 推奨画像プロンプト\n  '未投稿', // H: 投稿済みフラグ\n  '', // I: 投稿先（手動入力用）\n  `N8N自動生成 ${jstTime}` // J: 備考\n];\n\n// 5. 結果をログ出力\nconsole.log('=== シート書き込みデータ生成完了 ===');\nconsole.log('記事:', articleData.title || 'なし');\nconsole.log('投稿文:', (postData.post || 'なし').slice(0, 50) + (postData.post && postData.post.length > 50 ? '...' : ''));\nconsole.log('画像プロンプト:', (imagePromptData.image_prompt || 'なし').slice(0, 30) + (imagePromptData.image_prompt && imagePromptData.image_prompt.length > 30 ? '...' : ''));\nconsole.log('書き込み行:', row.map(cell => (cell || '').toString().slice(0, 20)).join(' | '));\n\nreturn [{ json: { values: [row] } }];"
+        },
+        "notes": "シート4の形式に合わせて配列 row を組み立てる。必要なら列順を変更してね。"
+      },
+  
+      {
+        "id": "17",
+        "name": "Google Sheets - Append Row (シート4)",
+        "type": "n8n-nodes-base.googleSheets",
+        "typeVersion": 1,
+        "position": [3050, 180],
+        "credentials": {
+          "googleSheetsOAuth2": {
+            "id": "={{$env.GOOGLE_SHEETS_CREDENTIAL_ID}}",
+            "name": "Google Sheets OAuth2"
+          }
+        },
+        "parameters": {
+          "operation": "append",
+          "sheetId": "={{$env.SHEET_ID}}",
+          "range": "A:J",
+          "sheetName": "投稿コンテンツ生成結果",
+          "valueInputMode": "USER_ENTERED",
+          "options": {
+            "data": "={{$json.values}}"
+          }
+        },
+        "notes": "生成結果をシート4へappend。書き込み権限は最小限に。"
+      },
+  
+      {
+        "id": "18",
+        "name": "Slack - Notify Completion",
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 1,
+        "position": [3300, 200],
+        "credentials": {
+          "slackApi": {
+            "id": "={{$env.SLACK_CRED_ID}}",
+            "name": "Slack"
+          }
+        },
+        "parameters": {
+          "operation": "postMessage",
+          "channel": "={{$env.SLACK_NOTIFICATION_CHANNEL}}",
+          "text": "={{`🤖 SNS情報収集完了！\\n📊 本日の生成件数: ${$runIndex + 1}件\\n📝 カテゴリ: ${$json.articleData?.category || '不明'}\\n📋 Google Sheetsの「投稿コンテンツ生成結果」を確認してください`}}"
+        },
+        "notes": "最終通知。処理数は Function 等で集計して count を流すと良い。"
+      },
+  
+      {
+        "id": "19",
+        "name": "Error Workflow Trigger (for separate error wf)",
+        "type": "n8n-nodes-base.errorWorkflowTrigger",
+        "typeVersion": 1,
+        "position": [500, 450],
+        "parameters": {},
+        "notes": "エラーワークフロー用トリガー（別ワークフローとして定義）"
+      },
+  
+      {
+        "id": "20",
+        "name": "Slack - Error Alert",
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 1,
+        "position": [750, 450],
+        "credentials": {
+          "slackApi": {
+            "id": "={{$env.SLACK_CRED_ID}}",
+            "name": "Slack"
+          }
+        },
+        "parameters": {
+          "operation": "postMessage",
+          "channel": "={{$env.SLACK_ERROR_CHANNEL}}",
+          "text": "={{`[ERROR] ワークフローでエラーが発生しました。詳細を確認してください: {{ $json[\"errorMessage\"] || \"unknown\" }}`}}"
+        },
+        "notes": "重大なエラーを専用チャンネルへ通知"
+      },
+  
+      {
+        "id": "21",
+        "name": "Email - Critical Error",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 1,
+        "position": [1000, 450],
+        "credentials": {
+          "smtp": {
+            "id": "={{$env.SMTP_CRED_ID}}",
+            "name": "SMTP"
+          }
+        },
+        "parameters": {
+          "toEmail": "={{$env.ONCALL_EMAIL}}",
+          "subject": "[CRITICAL] 自動収集ワークフロー エラー通知",
+          "text": "={{`ワークフローで重大なエラーが発生しました。ログを確認してください。\nエラー: ${$json[\"errorMessage\"] || \"unknown\"}`}}"
+        },
+        "notes": "重要なエラーのみメールで通知（retry 不能な致命的エラー等）"
+      }
+    ],
+    "connections": {
+      "Schedule Trigger (7:00 JST)": {
+        "main": [
+          [
+            {
+              "node": "Google Sheets - Read RSS Sources (シート1)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Google Sheets - Read Keywords (シート2)",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Google Sheets - Read Prompts (シート3)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Google Sheets - Read RSS Sources (シート1)": {
+        "main": [
+          [
+            {
+              "node": "Split RSS Sources (Loop)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Split RSS Sources (Loop)": {
+        "main": [
+          [
+            {
+              "node": "RSS Read (dynamic URL)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "RSS Read (dynamic URL)": {
+        "main": [
+          [
+            {
+              "node": "Function - Filter 24h & Normalize",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Function - Filter 24h & Normalize": {
+        "main": [
+          [
+            {
+              "node": "Function - Merge & Dedupe",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Google Sheets - Read Keywords (シート2)": {
+        "main": [
+          [
+            {
+              "node": "Split Keywords (Loop)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Split Keywords (Loop)": {
+        "main": [
+          [
+            {
+              "node": "HTTP Request - Google News/Search API",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTTP Request - Google News/Search API": {
+        "main": [
+          [
+            {
+              "node": "Function - Normalize Search Results",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Function - Normalize Search Results": {
+        "main": [
+          [
+            {
+              "node": "Function - Merge & Dedupe",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Google Sheets - Read Prompts (シート3)": {
+        "main": [
+          [
+            {
+              "node": "Function - Process Prompt Settings",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Function - Merge & Dedupe": {
+        "main": [
+          [
+            {
+              "node": "Split In Batches - By Category",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Split In Batches - By Category": {
+        "main": [
+          [
+            {
+              "node": "OpenAI - Filter (gpt-4)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "OpenAI - Filter (gpt-4)": {
+        "main": [
+          [
+            {
+              "node": "Function - Parse Filter Result",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Function - Parse Filter Result": {
+        "main": [
+          [
+            {
+              "node": "OpenAI - Generate Post Text (gpt-4)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "OpenAI - Generate Post Text (gpt-4)": {
+        "main": [
+          [
+            {
+              "node": "OpenAI - Generate Image Prompt",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "OpenAI - Generate Image Prompt": {
+        "main": [
+          [
+            {
+              "node": "Function - Shape Final Row for Sheets",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Function - Shape Final Row for Sheets": {
+        "main": [
+          [
+            {
+              "node": "Google Sheets - Append Row (シート4)",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Google Sheets - Append Row (シート4)": {
+        "main": [
+          [
+            {
+              "node": "Slack - Notify Completion",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Error Workflow Trigger (for separate error wf)": {
+        "main": [
+          [
+            {
+              "node": "Slack - Error Alert",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Email - Critical Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": false,
+    "settings": {
+      "timezone": "Asia/Tokyo",
+      "errorWorkflow": {
+        "id": "error-workflow-auto-content-pipeline",
+        "name": "Error Workflow - Auto Content Pipeline",
+        "active": true
+      }
+    },
+    "notes": "この JSON はベース実装。各種 credential（OPENAI_CRED_ID, GOOGLE_SHEETS_CREDENTIAL_ID, NEWSAPI_KEY, GOOGLE_CUSTOM_SEARCH_KEY, GOOGLE_CSE_ID, SLACK_CRED_ID, SMTP_CRED_ID, ONCALL_EMAIL, SLACK_NOTIFICATION_CHANNEL, SLACK_ERROR_CHANNEL 等）は n8n の環境変数＆credential として設定してください。"
+  }
+  

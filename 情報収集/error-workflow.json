@@ -1,0 +1,193 @@
+{
+  "name": "Error Workflow - Auto Content Pipeline",
+  "nodes": [
+    {
+      "id": "error-1",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [250, 100],
+      "parameters": {},
+      "notes": "メインワークフローからのエラーを受信するトリガー"
+    },
+    
+    {
+      "id": "error-2", 
+      "name": "Function - Error Analysis",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [500, 100],
+      "parameters": {
+        "functionCode": "// エラー情報を解析し、重要度を判定する\nconst errorData = $input.item.json;\nconst now = new Date();\n\n// エラーの詳細情報を抽出\nconst errorInfo = {\n  timestamp: now.toLocaleString('ja-JP', {timeZone: 'Asia/Tokyo'}),\n  workflowName: errorData.workflow?.name || 'Unknown Workflow',\n  nodeName: errorData.node?.name || 'Unknown Node',\n  errorMessage: errorData.error?.message || 'Unknown Error',\n  errorType: errorData.error?.type || 'Unknown Type',\n  errorStack: errorData.error?.stack || '',\n  executionId: errorData.execution?.id || 'Unknown',\n  retryable: false,\n  severity: 'medium'\n};\n\n// エラーの重要度判定\nconst criticalKeywords = ['credential', 'auth', 'permission', 'quota', 'limit exceeded'];\nconst retryableKeywords = ['timeout', 'network', 'temporary', 'rate limit', 'connection'];\nconst errorLower = errorInfo.errorMessage.toLowerCase();\n\nif (criticalKeywords.some(keyword => errorLower.includes(keyword))) {\n  errorInfo.severity = 'critical';\n} else if (retryableKeywords.some(keyword => errorLower.includes(keyword))) {\n  errorInfo.retryable = true;\n  errorInfo.severity = 'low';\n}\n\n// Slack用の整形されたメッセージを生成\nconst slackMessage = `🚨 *N8Nワークフローエラー*\\n` +\n  `⏰ 時刻: ${errorInfo.timestamp}\\n` +\n  `🔧 ワークフロー: ${errorInfo.workflowName}\\n` +\n  `📍 ノード: ${errorInfo.nodeName}\\n` +\n  `❌ エラー: ${errorInfo.errorMessage}\\n` +\n  `🔍 実行ID: ${errorInfo.executionId}\\n` +\n  `⚠️ 重要度: ${errorInfo.severity.toUpperCase()}${errorInfo.retryable ? ' (再試行可能)' : ''}`;\n\nconst emailSubject = `[${errorInfo.severity.toUpperCase()}] N8N情報収集エラー - ${errorInfo.nodeName}`;\nconst emailBody = `N8Nワークフローでエラーが発生しました。\\n\\n` +\n  `時刻: ${errorInfo.timestamp}\\n` +\n  `ワークフロー: ${errorInfo.workflowName}\\n` +\n  `ノード: ${errorInfo.nodeName}\\n` +\n  `エラーメッセージ: ${errorInfo.errorMessage}\\n` +\n  `エラータイプ: ${errorInfo.errorType}\\n` +\n  `実行ID: ${errorInfo.executionId}\\n\\n` +\n  `スタックトレース:\\n${errorInfo.errorStack}\\n\\n` +\n  `N8Nのログを確認して対応してください。`;\n\nreturn [{ \n  json: {\n    ...errorInfo,\n    slackMessage,\n    emailSubject,\n    emailBody\n  }\n}];"
+      },
+      "notes": "エラーの重要度判定とメッセージ整形。クリティカルエラーとリトライ可能エラーを区別。"
+    },
+    
+    {
+      "id": "error-3",
+      "name": "IF - Check Error Severity", 
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [750, 100],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.severity}}",
+              "operation": "notEqual",
+              "value2": "low"
+            }
+          ]
+        }
+      },
+      "notes": "重要度が low 以外の場合のみ通知を送る"
+    },
+    
+    {
+      "id": "error-4",
+      "name": "Slack - Error Notification",
+      "type": "n8n-nodes-base.slack", 
+      "typeVersion": 1,
+      "position": [1000, 50],
+      "credentials": {
+        "slackApi": {
+          "id": "={{$env.SLACK_CRED_ID}}",
+          "name": "Slack"
+        }
+      },
+      "parameters": {
+        "operation": "postMessage",
+        "channel": "={{$env.SLACK_ERROR_CHANNEL || $env.SLACK_NOTIFICATION_CHANNEL}}",
+        "text": "={{$json.slackMessage}}"
+      },
+      "notes": "Slack にエラー通知を送信"
+    },
+    
+    {
+      "id": "error-5",
+      "name": "IF - Check Critical Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1000, 150],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.severity}}",
+              "operation": "equal",
+              "value2": "critical"
+            }
+          ]
+        }
+      },
+      "notes": "クリティカルエラーの場合のみメール送信"
+    },
+    
+    {
+      "id": "error-6",
+      "name": "Email - Critical Error Alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1250, 150],
+      "credentials": {
+        "smtp": {
+          "id": "={{$env.SMTP_CRED_ID}}",
+          "name": "SMTP"
+        }
+      },
+      "parameters": {
+        "toEmail": "={{$env.ONCALL_EMAIL}}",
+        "subject": "={{$json.emailSubject}}",
+        "text": "={{$json.emailBody}}"
+      },
+      "notes": "クリティカルエラー時のメール通知"
+    },
+    
+    {
+      "id": "error-7",
+      "name": "Google Sheets - Log Error",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [750, 250],
+      "credentials": {
+        "googleSheetsOAuth2": {
+          "id": "={{$env.GOOGLE_SHEETS_CREDENTIAL_ID}}",
+          "name": "Google Sheets OAuth2"
+        }
+      },
+      "parameters": {
+        "operation": "append",
+        "sheetId": "={{$env.SHEET_ID}}",
+        "range": "A:H",
+        "sheetName": "エラーログ",
+        "valueInputMode": "USER_ENTERED",
+        "options": {
+          "data": "=[[[$json.timestamp, $json.workflowName, $json.nodeName, $json.errorMessage, $json.errorType, $json.severity, $json.executionId, $json.retryable ? '可能' : '不可能']]]"
+        }
+      },
+      "notes": "エラーログをスプレッドシートに記録（分析用）"
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Function - Error Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Function - Error Analysis": {
+      "main": [
+        [
+          {
+            "node": "IF - Check Error Severity",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Sheets - Log Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Check Error Severity": {
+      "main": [
+        [
+          {
+            "node": "Slack - Error Notification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF - Check Critical Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Check Critical Error": {
+      "main": [
+        [
+          {
+            "node": "Email - Critical Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "Asia/Tokyo",
+    "executionOrder": "v1"
+  },
+  "notes": "メインワークフローのエラーハンドリング専用。重要度に応じてSlack・メール・ログ記録を実行。"
+}
